@@ -24,16 +24,16 @@ class MaiCalendarWidget extends StatefulWidget {
 
   /// 事件點擊回調
   final Function(CalendarEvent)? onEventTap;
-
-  /// 創建一個 Mai 行事曆小部件
+  final CalendarBloc calendarBloc;
   const MaiCalendarWidget({
-    Key? key,
+    super.key,
     this.initialView = CalendarView.month,
     this.initialDisplayDate,
     this.allowViewNavigation = true,
     this.showTodayButton = true,
     this.onEventTap,
-  }) : super(key: key);
+    required this.calendarBloc,
+  });
 
   @override
   State<MaiCalendarWidget> createState() => _MaiCalendarWidgetState();
@@ -47,7 +47,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
   @override
   void initState() {
     super.initState();
-    _calendarController = CalendarController();
+    _calendarController = widget.calendarBloc.calendarController;
     _currentView = widget.initialView;
     _currentViewDate = widget.initialDisplayDate ?? DateTime.now();
 
@@ -187,7 +187,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
 
   /// 構建行事曆組件
   Widget _buildCalendar(CalendarState state) {
-    if (state is CalendarEventsLoading && !(state is CalendarEventsLoaded)) {
+    if (state is CalendarEventsLoading && state is! CalendarEventsLoaded) {
       // 只有在沒有加載過事件的情況下顯示加載中
       return const Center(child: CircularProgressIndicator());
     }
@@ -204,7 +204,8 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       initialDisplayDate: widget.initialDisplayDate ?? DateTime.now(),
       dataSource: MaiCalendarDataSource(events),
       allowViewNavigation: widget.allowViewNavigation,
-      showNavigationArrow: true,
+      showNavigationArrow: false,
+      showWeekNumber: false,
       headerStyle: const CalendarHeaderStyle(
         textAlign: TextAlign.center,
         textStyle: TextStyle(
@@ -218,7 +219,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       ),
       monthViewSettings: const MonthViewSettings(
         appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
-        showAgenda: true,
+        showAgenda: false,
         agendaStyle: AgendaStyle(
           backgroundColor: Colors.white,
           appointmentTextStyle: TextStyle(
@@ -234,23 +235,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
           fontSize: 14,
         ),
       ),
-      onTap: (CalendarTapDetails details) {
-        if (details.targetElement == CalendarElement.appointment && details.appointments != null && details.appointments!.isNotEmpty) {
-          final appointment = details.appointments![0];
-          if (appointment is CalendarEvent && widget.onEventTap != null) {
-            widget.onEventTap!(appointment);
-          }
-        }
-      },
-      onViewChanged: (ViewChangedDetails details) {
-        if (details.visibleDates.isNotEmpty) {
-          setState(() {
-            _currentViewDate = details.visibleDates[details.visibleDates.length ~/ 2];
-            _currentView = _calendarController.view!;
-          });
-          _loadEventsForCurrentView();
-        }
-      },
+      // onTap: (CalendarTapDetails details) {},
     );
   }
 }

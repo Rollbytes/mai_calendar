@@ -47,7 +47,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               tooltip: '切換視圖',
               icon: const Icon(Icons.view_day),
               onSelected: (CalendarView view) {
-                // 處理視圖切換
+                _calendarBloc.add(ChangeCalendarView(view));
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<CalendarView>>[
                 const PopupMenuItem<CalendarView>(
@@ -75,9 +75,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ],
         ),
-        body: const Padding(
-          padding: EdgeInsets.all(8.0),
+        body: Padding(
+          padding: const EdgeInsets.all(8.0),
           child: MaiCalendarWidget(
+            calendarBloc: _calendarBloc,
             initialView: CalendarView.month,
             showTodayButton: true,
           ),
@@ -233,7 +234,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         startTime: startTime,
                         endTime: endTime,
                         isAllDay: isAllDay,
-                        color: selectedColor,
+                        color: selectedColor ?? '#000000',
                       ),
                     );
 

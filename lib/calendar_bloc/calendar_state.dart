@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../models/index.dart';
 
 /// 行事曆Bloc狀態基類
@@ -90,4 +91,13 @@ class CalendarOperationFailed extends CalendarState {
 
   @override
   List<Object?> get props => [message, error];
+}
+
+class CalendarViewChanged extends CalendarState {
+  final CalendarView view;
+
+  const CalendarViewChanged(this.view);
+
+  @override
+  List<Object?> get props => [view];
 }
