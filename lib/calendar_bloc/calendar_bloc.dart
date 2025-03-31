@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mai_calendar/models/calendar_models.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import '../models/index.dart';
 import '../repositories/calendar_repository.dart';
 import 'calendar_event.dart';
 import 'calendar_state.dart';
@@ -13,7 +13,7 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
 
   CalendarBloc({required CalendarRepository repository})
       : _repository = repository,
-        super(CalendarInitial()) {
+        super(CalendarState.initial()) {
     // 註冊事件處理
     on<LoadCalendarEvents>(_onLoadCalendarEvents);
     on<LoadCalendarEvent>(_onLoadCalendarEvent);
@@ -27,19 +27,20 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
   /// 處理加載多個事件的事件
   Future<void> _onLoadCalendarEvents(LoadCalendarEvents event, Emitter<CalendarState> emit) async {
     try {
-      emit(CalendarEventsLoading());
+      emit(state.loading());
       final events = await _repository.getEvents(
         start: event.start,
         end: event.end,
         source: event.source,
       );
-      emit(CalendarEventsLoaded(
-        events: events,
+      emit(state.eventsLoaded(
+        events,
         startDate: event.start,
         endDate: event.end,
+        source: event.source,
       ));
     } catch (e) {
-      emit(CalendarOperationFailed('加載事件失敗', e));
+      emit(state.withError('加載事件失敗', e));
     }
   }
 
@@ -49,15 +50,19 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
     Emitter<CalendarState> emit,
   ) async {
     try {
-      emit(CalendarEventsLoading());
+      emit(state.loading());
       final calendarEvent = await _repository.getEvent(event.eventId);
       if (calendarEvent != null) {
-        emit(CalendarEventLoaded(calendarEvent));
+        // 使用現有事件列表，更新selectedEvent
+        emit(state.copyWith(
+          status: CalendarStatus.loaded,
+          selectedEvent: calendarEvent,
+        ));
       } else {
-        emit(const CalendarOperationFailed('事件不存在'));
+        emit(state.withError('事件不存在'));
       }
     } catch (e) {
-      emit(CalendarOperationFailed('加載事件失敗', e));
+      emit(state.withError('加載事件失敗', e));
     }
   }
 
@@ -67,14 +72,20 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
     Emitter<CalendarState> emit,
   ) async {
     try {
-      emit(CalendarEventsLoading());
+      emit(state.copyWith(status: CalendarStatus.creating));
       final createdEvent = await _repository.createEvent(event.event);
-      emit(CalendarEventCreated(createdEvent));
 
-      // 刷新事件列表
-      add(LoadCalendarEvents());
+      // 將新創建的事件添加到現有事件列表中
+      final updatedEvents = List<CalendarEvent>.from(state.events)..add(createdEvent);
+
+      emit(state.copyWith(
+        status: CalendarStatus.loaded,
+        events: updatedEvents,
+        selectedEvent: createdEvent,
+        lastCreatedEventId: createdEvent.id,
+      ));
     } catch (e) {
-      emit(CalendarOperationFailed('創建事件失敗', e));
+      emit(state.withError('創建事件失敗', e));
     }
   }
 
@@ -84,14 +95,25 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
     Emitter<CalendarState> emit,
   ) async {
     try {
-      emit(CalendarEventsLoading());
+      emit(state.copyWith(status: CalendarStatus.updating));
       final updatedEvent = await _repository.updateEvent(event.event);
-      emit(CalendarEventUpdated(updatedEvent));
 
-      // 刷新事件列表
-      add(LoadCalendarEvents());
+      // 更新事件列表中的對應事件
+      final eventIndex = state.events.indexWhere((e) => e.id == updatedEvent.id);
+      final updatedEvents = List<CalendarEvent>.from(state.events);
+
+      if (eventIndex >= 0) {
+        updatedEvents[eventIndex] = updatedEvent;
+      }
+
+      emit(state.copyWith(
+        status: CalendarStatus.loaded,
+        events: updatedEvents,
+        selectedEvent: updatedEvent,
+        lastUpdatedEventId: updatedEvent.id,
+      ));
     } catch (e) {
-      emit(CalendarOperationFailed('更新事件失敗', e));
+      emit(state.withError('更新事件失敗', e));
     }
   }
 
@@ -101,35 +123,62 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
     Emitter<CalendarState> emit,
   ) async {
     try {
-      emit(CalendarEventsLoading());
+      emit(state.copyWith(status: CalendarStatus.deleting));
       final success = await _repository.deleteEvent(event.eventId);
-      if (success) {
-        emit(CalendarEventDeleted(event.eventId));
 
-        // 刷新事件列表
-        add(LoadCalendarEvents());
+      if (success) {
+        // 從事件列表中移除已刪除的事件
+        final updatedEvents = state.events.where((e) => e.id != event.eventId).toList();
+
+        emit(state.copyWith(
+          status: CalendarStatus.loaded,
+          events: updatedEvents,
+          lastDeletedEventId: event.eventId,
+          // 如果當前選中的事件是被刪除的事件，清空選中事件
+          selectedEvent: state.selectedEvent?.id == event.eventId ? null : state.selectedEvent,
+        ));
       } else {
-        emit(const CalendarOperationFailed('刪除事件失敗'));
+        emit(state.withError('刪除事件失敗'));
       }
     } catch (e) {
-      emit(CalendarOperationFailed('刪除事件失敗', e));
+      emit(state.withError('刪除事件失敗', e));
     }
   }
 
+  /// 處理視圖切換
   Future<void> _onChangeCalendarView(ChangeCalendarView event, Emitter<CalendarState> emit) async {
     calendarController.view = event.view;
-    emit(CalendarViewChanged(event.view));
+    // 只更新視圖類型，保留已加載的事件數據
+    emit(state.viewChanged(event.view));
   }
 
+  /// 處理簡單事件創建
   Future<void> _onCreateSimpleCalendarEvent(CreateSimpleCalendarEvent event, Emitter<CalendarState> emit) async {
-    final createdEvent = await _repository.createEvent(CalendarEvent(
-      title: event.title,
-      startTime: event.startTime,
-      endTime: event.endTime,
-      isAllDay: event.isAllDay,
-      color: event.color,
-      id: '',
-    ));
-    emit(CalendarEventCreated(createdEvent));
+    try {
+      emit(state.copyWith(status: CalendarStatus.creating));
+
+      final calendarEvent = CalendarEvent(
+        id: '',
+        title: event.title,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        isAllDay: event.isAllDay,
+        color: event.color,
+      );
+
+      final createdEvent = await _repository.createEvent(calendarEvent);
+
+      // 將新創建的事件添加到現有事件列表中
+      final updatedEvents = List<CalendarEvent>.from(state.events)..add(createdEvent);
+
+      emit(state.copyWith(
+        status: CalendarStatus.loaded,
+        events: updatedEvents,
+        selectedEvent: createdEvent,
+        lastCreatedEventId: createdEvent.id,
+      ));
+    } catch (e) {
+      emit(state.withError('創建事件失敗', e));
+    }
   }
 }

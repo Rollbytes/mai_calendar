@@ -19,9 +19,6 @@ class MaiCalendarWidget extends StatefulWidget {
   /// 是否允許視圖切換
   final bool allowViewNavigation;
 
-  /// 是否顯示今天按鈕
-  final bool showTodayButton;
-
   /// 事件點擊回調
   final Function(CalendarEvent)? onEventTap;
   final CalendarBloc calendarBloc;
@@ -29,8 +26,7 @@ class MaiCalendarWidget extends StatefulWidget {
     super.key,
     this.initialView = CalendarView.month,
     this.initialDisplayDate,
-    this.allowViewNavigation = true,
-    this.showTodayButton = true,
+    this.allowViewNavigation = false,
     this.onEventTap,
     required this.calendarBloc,
   });
@@ -99,8 +95,6 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
         return DateTime(_currentViewDate.year, _currentViewDate.month, 1);
       case CalendarView.schedule:
         return DateTime(_currentViewDate.year, _currentViewDate.month, 1);
-      default:
-        return DateTime(_currentViewDate.year, _currentViewDate.month, 1);
     }
   }
 
@@ -136,9 +130,6 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       case CalendarView.schedule:
         final monthEnd = DateTime(_currentViewDate.year, _currentViewDate.month + 1, 0);
         return DateTime(monthEnd.year, monthEnd.month, monthEnd.day, 23, 59, 59);
-      default:
-        final monthEnd = DateTime(_currentViewDate.year, _currentViewDate.month + 1, 0);
-        return DateTime(monthEnd.year, monthEnd.month, monthEnd.day, 23, 59, 59);
     }
   }
 
@@ -147,54 +138,23 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     return BlocConsumer<CalendarBloc, CalendarState>(
       listener: (context, state) {
         // 可以在這裡處理一些通知或彈窗
-        if (state is CalendarOperationFailed) {
+        if (state.isError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
+            SnackBar(content: Text(state.errorMessage ?? '操作失敗')),
           );
         }
       },
       builder: (context, state) {
-        return Column(
-          children: [
-            if (widget.showTodayButton)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      icon: const Icon(Icons.today),
-                      label: const Text('今天'),
-                      onPressed: () {
-                        setState(() {
-                          _currentViewDate = DateTime.now();
-                          _calendarController.displayDate = _currentViewDate;
-                        });
-                        _loadEventsForCurrentView();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            Expanded(
-              child: _buildCalendar(state),
-            ),
-          ],
-        );
+        return _buildCalendar(state);
       },
     );
   }
 
   /// 構建行事曆組件
   Widget _buildCalendar(CalendarState state) {
-    if (state is CalendarEventsLoading && state is! CalendarEventsLoaded) {
+    if (state.isLoading && state.events.isEmpty) {
       // 只有在沒有加載過事件的情況下顯示加載中
       return const Center(child: CircularProgressIndicator());
-    }
-
-    List<CalendarEvent> events = [];
-    if (state is CalendarEventsLoaded) {
-      events = state.events;
     }
 
     return SfCalendar(
@@ -202,7 +162,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       view: _currentView,
       firstDayOfWeek: 1, // 週一作為一週的第一天
       initialDisplayDate: widget.initialDisplayDate ?? DateTime.now(),
-      dataSource: MaiCalendarDataSource(events),
+      dataSource: MaiCalendarDataSource(state.events),
       allowViewNavigation: widget.allowViewNavigation,
       showNavigationArrow: false,
       showWeekNumber: false,
@@ -235,7 +195,14 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
           fontSize: 14,
         ),
       ),
-      // onTap: (CalendarTapDetails details) {},
+      onTap: (CalendarTapDetails details) {
+        if (details.targetElement == CalendarElement.appointment && details.appointments != null && details.appointments!.isNotEmpty) {
+          final appointment = details.appointments![0];
+          if (appointment is CalendarEvent && widget.onEventTap != null) {
+            widget.onEventTap!(appointment);
+          }
+        }
+      },
     );
   }
 }

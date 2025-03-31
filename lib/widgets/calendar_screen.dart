@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../calendar_bloc/calendar_bloc.dart';
 import '../calendar_bloc/calendar_event.dart';
+import '../calendar_bloc/calendar_state.dart';
 import '../repositories/calendar_repository.dart';
 import 'mai_calendar_widget.dart';
 
@@ -39,49 +40,89 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _calendarBloc,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Mai 行事曆'),
-          actions: [
-            PopupMenuButton<CalendarView>(
-              tooltip: '切換視圖',
-              icon: const Icon(Icons.view_day),
-              onSelected: (CalendarView view) {
-                _calendarBloc.add(ChangeCalendarView(view));
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<CalendarView>>[
-                const PopupMenuItem<CalendarView>(
-                  value: CalendarView.day,
-                  child: Text('日視圖'),
+      child: SafeArea(
+        child: BlocBuilder<CalendarBloc, CalendarState>(
+          builder: (context, state) {
+            return Column(
+              children: [
+                // 頂部操作區域
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '行事曆',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      Row(
+                        children: [
+                          // 視圖切換按鈕
+                          PopupMenuButton<CalendarView>(
+                            tooltip: '切換視圖',
+                            icon: const Icon(Icons.view_day),
+                            onSelected: (CalendarView view) {
+                              _calendarBloc.add(ChangeCalendarView(view));
+                            },
+                            itemBuilder: (BuildContext context) => <PopupMenuEntry<CalendarView>>[
+                              const PopupMenuItem<CalendarView>(
+                                value: CalendarView.day,
+                                child: Text('日視圖'),
+                              ),
+                              const PopupMenuItem<CalendarView>(
+                                value: CalendarView.week,
+                                child: Text('週視圖'),
+                              ),
+                              const PopupMenuItem<CalendarView>(
+                                value: CalendarView.month,
+                                child: Text('月視圖'),
+                              ),
+                              const PopupMenuItem<CalendarView>(
+                                value: CalendarView.schedule,
+                                child: Text('列表視圖'),
+                              ),
+                            ],
+                          ),
+                          // 添加事件按鈕
+                          IconButton(
+                            icon: const Icon(Icons.add),
+                            tooltip: '添加事件',
+                            onPressed: _addNewEvent,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const PopupMenuItem<CalendarView>(
-                  value: CalendarView.week,
-                  child: Text('週視圖'),
-                ),
-                const PopupMenuItem<CalendarView>(
-                  value: CalendarView.month,
-                  child: Text('月視圖'),
-                ),
-                const PopupMenuItem<CalendarView>(
-                  value: CalendarView.schedule,
-                  child: Text('列表視圖'),
+                // 日曆部分
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Stack(
+                      children: [
+                        MaiCalendarWidget(
+                          calendarBloc: _calendarBloc,
+                          initialView: state.currentView,
+                          allowViewNavigation: false,
+                          onEventTap: (event) {
+                            // 可以在這裡添加事件點擊處理邏輯
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('點擊事件: ${event.title}')),
+                            );
+                          },
+                        ),
+                        // 加載指示器
+                        if (state.isLoading && state.events.isEmpty)
+                          const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              tooltip: '添加事件',
-              onPressed: _addNewEvent,
-            ),
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: MaiCalendarWidget(
-            calendarBloc: _calendarBloc,
-            initialView: CalendarView.month,
-            showTodayButton: true,
-          ),
+            );
+          },
         ),
       ),
     );
