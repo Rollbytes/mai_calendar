@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'calendar_bloc/calendar_bloc.dart';
-import 'repositories/calendar_repository.dart';
-import 'widgets/home_screen.dart';
+import 'src/calendar_bloc/calendar_bloc.dart';
+import 'src/repositories/calendar_repository.dart';
+import 'screen/home_screen.dart';
 
 void main() {
   runApp(const MyApp());
