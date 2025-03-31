@@ -1,0 +1,8 @@
+version: "Apple Swift version 6.0.3 (swiftlang-6.0.3.1.10 clang-1600.0.30.1)"
+options: "4060d78c8ed032c0b9bd3fdc49c93caef42bc771fdf8d8ff4c82edf949e8bd6e"
+build_start_time: [1743418467, 744742000]
+build_end_time: [1743418477, 962761000]
+inputs:
+  "/Users/wangtseyuan/Desktop/mai_calendar/ios/Runner/AppDelegate.swift": [1723436418, 23161261]
+  ? "/Users/wangtseyuan/Desktop/mai_calendar/ios/build/Runner.build/Release-iphoneos/Runner.build/DerivedSources/GeneratedAssetSymbols.swift"
+  : [1743418467, 513169902]
