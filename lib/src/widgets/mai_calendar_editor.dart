@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mai_calendar/src/feature/color_picker/color_picker_bloc.dart';
+import 'package:mai_calendar/src/feature/color_picker/color_picker_event.dart';
 import 'package:mai_calendar/src/feature/color_picker/color_picker_widget.dart';
 import 'package:mai_calendar/src/feature/time_selector/time_selector.dart';
 import 'package:mai_calendar/src/feature/time_selector/time_selector_bloc.dart';
@@ -15,6 +16,7 @@ import 'package:mai_calendar/src/models/db_models.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_event.dart' as bloc_event;
 import 'package:mai_calendar/src/calendar_bloc/calendar_state.dart';
+import 'package:mai_calendar/repository_regisitor.dart';
 
 /// 表單模式枚舉
 enum MaiCalendarBottomSheetMode {
@@ -33,7 +35,7 @@ class MaiCalendarEditor {
     required DateTime currentDate,
     MaiCalendarBottomSheetMode mode = MaiCalendarBottomSheetMode.create,
     CalendarEvent? eventData, // 當 mode 為 view 時，用於傳遞事件數據
-    CalendarBloc? calendarBloc, // 使用 CalendarBloc 代替 repository
+    required CalendarBloc calendarBloc, // 改為必須參數
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -44,7 +46,7 @@ class MaiCalendarEditor {
           currentDate: currentDate,
           mode: mode,
           eventData: eventData,
-          calendarBloc: calendarBloc, // 傳遞 CalendarBloc 而不是 repository
+          calendarBloc: calendarBloc, // 傳遞 CalendarBloc
         );
       },
     );
@@ -56,13 +58,13 @@ class _MaiCalendarBottomSheetContent extends StatefulWidget {
   final DateTime currentDate;
   final MaiCalendarBottomSheetMode mode;
   final CalendarEvent? eventData;
-  final CalendarBloc? calendarBloc; // 使用 CalendarBloc 代替 repository
+  final CalendarBloc calendarBloc; // 改為可選
 
   const _MaiCalendarBottomSheetContent({
     required this.currentDate,
     this.mode = MaiCalendarBottomSheetMode.create,
     this.eventData,
-    required this.calendarBloc, // 要求提供 CalendarBloc
+    required this.calendarBloc, // 不再需要 required
   });
 
   @override
@@ -74,7 +76,6 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   bool _isSpecialTitle = false; // 添加狀態變量來追踪是否有特殊標題
   bool _isSaving = false; // 是否正在保存
   late ColorPickerBloc _colorPickerBloc;
-  String? _selectedColor; // 添加本地狀態存儲選擇的顏色
 
   // 時間選擇相關狀態
   late DateTime _startTime;
@@ -90,25 +91,21 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
 
   // SpaceSelectorBloc
   late SpaceSelectorBloc _spaceSelectorBloc;
-  // 用於 SpaceSelector 的 repository
-  late CalendarRepository _repository;
 
   @override
   void initState() {
     super.initState();
     _titleTextEditingController = TextEditingController();
 
-    // 獲取 CalendarRepository
-    if (widget.calendarBloc != null) {
-      // 由於 CalendarBloc 沒有公開 repository 屬性，我們需要創建新的 repository
-      _repository = CalendarRepository();
-    } else {
-      _repository = CalendarRepository();
+    // 初始化 Blocs
+    _spaceSelectorBloc = SpaceSelectorBloc(repository: getIt<CalendarRepository>());
+    _colorPickerBloc = ColorPickerBloc();
+
+    // 如果有現有事件，初始化顏色
+    if (widget.eventData?.color != null) {
+      _colorPickerBloc.add(SelectColor(widget.eventData!.color));
     }
 
-    // 初始化 SpaceSelectorBloc 和 ColorPickerBloc
-    _spaceSelectorBloc = SpaceSelectorBloc(repository: _repository);
-    _colorPickerBloc = ColorPickerBloc();
     _timeSelectorBloc = TimeSelectorBloc();
 
     // 初始化時間
@@ -118,7 +115,6 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
     // 如果有現有事件，初始化相關狀態
     if (widget.eventData != null) {
       _titleTextEditingController.text = widget.eventData!.title;
-      _selectedColor = widget.eventData!.color; // 初始化顏色
       _startTime = widget.eventData!.startTime;
       _endTime = widget.eventData!.endTime;
       _isAllDay = widget.eventData!.isAllDay;
@@ -144,13 +140,11 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
 
   @override
   Widget build(BuildContext context) {
-    return widget.calendarBloc != null
-        ? BlocListener<CalendarBloc, CalendarState>(
-            bloc: widget.calendarBloc,
-            listener: _handleBlocStateChanges,
-            child: _buildContent(context),
-          )
-        : _buildContent(context);
+    return BlocListener<CalendarBloc, CalendarState>(
+      bloc: widget.calendarBloc,
+      listener: _handleBlocStateChanges,
+      child: _buildContent(context),
+    );
   }
 
   // 處理 Bloc 狀態變化
@@ -158,13 +152,15 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
     if (_isSaving) {
       if (state.status == CalendarStatus.loaded) {
         // 保存成功，關閉表單
+        setState(() {
+          _isSaving = false;
+        });
         Navigator.of(context).pop();
-      } else if (state.status == CalendarStatus.error) {
-        // 保存失敗，顯示錯誤信息
-        _isSaving = false;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失敗: ${state.error}')),
-        );
+      } else {
+        // 其他狀態，重置保存狀態
+        setState(() {
+          _isSaving = false;
+        });
       }
     }
   }
@@ -227,7 +223,7 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
               style: TextButton.styleFrom(padding: EdgeInsets.zero),
               child: const Text(
                 "取消",
-                style: TextStyle(fontSize: 18, height: 1),
+                style: TextStyle(fontSize: 16),
               ),
             ),
           ),
@@ -248,14 +244,11 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
               child: TextButton(
                 onPressed: _isSaving ? null : _saveEvent, // 避免重複點擊
                 style: ButtonStyle(
-                  foregroundColor: MaterialStatePropertyAll(_isSaving ? Colors.grey : Theme.of(context).primaryColor),
+                  foregroundColor: WidgetStatePropertyAll(_isSaving ? Colors.grey : Theme.of(context).primaryColor),
                 ),
                 child: _isSaving
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text(
-                        "儲存",
-                        style: TextStyle(fontSize: 18, height: 1),
-                      ),
+                    : const Text("儲存", style: TextStyle(fontSize: 16)),
               ),
             ),
           ),
@@ -388,7 +381,7 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
     // 創建或更新事件
     final CalendarEvent newEvent = widget.eventData?.copyWith(
           title: _titleTextEditingController.text,
-          color: _selectedColor, // 使用本地狀態中的顏色
+          color: _colorPickerBloc.state.selectedColor, // 使用 BLoC 狀態獲取顏色
           startTime: _startTime, // 使用選擇的開始時間
           endTime: _endTime, // 使用選擇的結束時間
           isAllDay: _isAllDay, // 使用選擇的全天事件狀態
@@ -399,8 +392,7 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
           startTime: _startTime, // 使用選擇的開始時間
           endTime: _endTime, // 使用選擇的結束時間
           isAllDay: _isAllDay, // 使用選擇的全天事件狀態
-          color: _selectedColor ?? "#3366FFFF", // 使用選擇的顏色或預設藍色
-          source: 'MaiTable',
+          color: _colorPickerBloc.state.selectedColor,
         );
 
     // 添加空間信息
@@ -420,46 +412,15 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
     );
 
     // 使用 CalendarBloc 發送事件
-    if (widget.calendarBloc != null) {
-      if (widget.eventData == null) {
-        // 創建新事件
-        widget.calendarBloc!.add(bloc_event.CreateCalendarEvent(eventWithSpace));
-      } else {
-        // 更新現有事件
-        widget.calendarBloc!.add(bloc_event.UpdateCalendarEvent(eventWithSpace));
-      }
-
-      // 注意：表單關閉由 BlocListener 處理
+    if (widget.eventData == null) {
+      // 創建新事件
+      widget.calendarBloc.add(bloc_event.CreateCalendarEvent(eventWithSpace));
     } else {
-      // 如果沒有提供 CalendarBloc，則使用 repository 直接保存
-      try {
-        if (widget.eventData == null) {
-          _repository.createEvent(eventWithSpace).then((_) {
-            Navigator.of(context).pop();
-          }).catchError((error) {
-            _showError('保存失敗: $error');
-          });
-        } else {
-          _repository.updateEvent(eventWithSpace).then((_) {
-            Navigator.of(context).pop();
-          }).catchError((error) {
-            _showError('保存失敗: $error');
-          });
-        }
-      } catch (e) {
-        _showError('保存失敗: $e');
-      }
+      // 更新現有事件
+      widget.calendarBloc.add(bloc_event.UpdateCalendarEvent(eventWithSpace));
     }
-  }
 
-  // 顯示錯誤信息
-  void _showError(String message) {
-    setState(() {
-      _isSaving = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    // 注意：表單關閉由 BlocListener 處理
   }
 
   // 構建日期時間選擇器
@@ -482,12 +443,8 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   Widget _buildColorPicker() {
     return ColorPickerWidget(
       colorPickerBloc: _colorPickerBloc,
-      initialColor: _selectedColor ?? widget.eventData?.color, // 使用本地狀態或初始值
-      onColorChanged: (color) {
-        setState(() {
-          _selectedColor = color; // 更新本地狀態而非 widget.eventData
-        });
-      },
+      initialColor: widget.eventData?.color, // 只傳遞初始顏色，不再使用本地狀態
+      onColorChanged: null, // 不再需要回調更新本地狀態
     );
   }
 }

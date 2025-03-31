@@ -67,13 +67,16 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
   }
 
   /// 處理創建事件的事件
-  Future<void> _onCreateCalendarEvent(
-    CreateCalendarEvent event,
-    Emitter<CalendarState> emit,
-  ) async {
+  Future<void> _onCreateCalendarEvent(CreateCalendarEvent event, Emitter<CalendarState> emit) async {
     try {
       emit(state.copyWith(status: CalendarStatus.creating));
-      final createdEvent = await _repository.createEvent(event.event);
+      final createdEvent = await _repository.createCalendarEvent(
+        title: event.calendarEvent.title,
+        startTime: event.calendarEvent.startTime,
+        endTime: event.calendarEvent.endTime,
+        isAllDay: event.calendarEvent.isAllDay,
+        color: event.calendarEvent.color,
+      );
 
       // 將新創建的事件添加到現有事件列表中
       final updatedEvents = List<CalendarEvent>.from(state.events)..add(createdEvent);

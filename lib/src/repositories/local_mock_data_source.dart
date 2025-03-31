@@ -170,7 +170,6 @@ class LocalMockDataSource implements DataSource {
         endTime: endTime,
         isAllDay: _random.nextBool(), // 隨機決定是否為全天事件
         color: '${_predefinedColors[i % _predefinedColors.length]}FF',
-        source: 'MaiTable',
         rowId: rowId,
         columnId: columnId,
         // 階層結構資訊
@@ -216,12 +215,7 @@ class LocalMockDataSource implements DataSource {
       if (end != null && (event.endTime ?? event.startTime).isAfter(end)) {
         return false;
       }
-
-      // 檢查來源
-      if (source != null && event.source != source) {
-        return false;
-      }
-
+      
       return true;
     }).toList();
   }

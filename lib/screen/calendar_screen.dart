@@ -79,15 +79,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               ),
                               const PopupMenuItem<CalendarView>(
                                 value: CalendarView.schedule,
-                                child: Text('列表視圖'),
+                                child: Text('行程視圖'),
                               ),
                             ],
-                          ),
-                          // 添加事件按鈕
-                          IconButton(
-                            icon: const Icon(Icons.add),
-                            tooltip: '添加事件',
-                            onPressed: _addNewEvent,
                           ),
                         ],
                       ),
@@ -104,12 +98,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           calendarBloc: _calendarBloc,
                           initialView: state.currentView,
                           allowViewNavigation: false,
-                          onEventTap: (event) {
-                            // 可以在這裡添加事件點擊處理邏輯
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('點擊事件: ${event.title}')),
-                            );
-                          },
                         ),
                         // 加載指示器
                         if (state.isLoading && state.events.isEmpty)
@@ -125,169 +113,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
           },
         ),
       ),
-    );
-  }
-
-  /// 添加新事件的對話框
-  void _addNewEvent() {
-    final titleController = TextEditingController();
-    DateTime selectedDate = DateTime.now();
-    TimeOfDay selectedStartTime = TimeOfDay.now();
-    TimeOfDay? selectedEndTime;
-    bool isAllDay = false;
-    String? selectedColor;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return AlertDialog(
-              title: const Text('新增事件'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(
-                        labelText: '事件標題',
-                        hintText: '請輸入事件標題',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ListTile(
-                      title: const Text('日期'),
-                      subtitle: Text(
-                        '${selectedDate.year}/${selectedDate.month}/${selectedDate.day}',
-                      ),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () async {
-                        final pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2030),
-                        );
-                        if (pickedDate != null) {
-                          setState(() {
-                            selectedDate = pickedDate;
-                          });
-                        }
-                      },
-                    ),
-                    CheckboxListTile(
-                      title: const Text('全天事件'),
-                      value: isAllDay,
-                      onChanged: (value) {
-                        setState(() {
-                          isAllDay = value ?? false;
-                        });
-                      },
-                    ),
-                    if (!isAllDay) ...[
-                      ListTile(
-                        title: const Text('開始時間'),
-                        subtitle: Text(
-                          '${selectedStartTime.hour}:${selectedStartTime.minute.toString().padLeft(2, '0')}',
-                        ),
-                        trailing: const Icon(Icons.access_time),
-                        onTap: () async {
-                          final pickedTime = await showTimePicker(
-                            context: context,
-                            initialTime: selectedStartTime,
-                          );
-                          if (pickedTime != null) {
-                            setState(() {
-                              selectedStartTime = pickedTime;
-                            });
-                          }
-                        },
-                      ),
-                      ListTile(
-                        title: const Text('結束時間 (可選)'),
-                        subtitle: Text(
-                          selectedEndTime != null ? '${selectedEndTime!.hour}:${selectedEndTime!.minute.toString().padLeft(2, '0')}' : '未設定',
-                        ),
-                        trailing: const Icon(Icons.access_time),
-                        onTap: () async {
-                          final pickedTime = await showTimePicker(
-                            context: context,
-                            initialTime: selectedEndTime ?? selectedStartTime.replacing(hour: selectedStartTime.hour + 1),
-                          );
-                          if (pickedTime != null) {
-                            setState(() {
-                              selectedEndTime = pickedTime;
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('取消'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    // 獲取所需數據
-                    final title = titleController.text.trim();
-                    if (title.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('請輸入事件標題')),
-                      );
-                      return;
-                    }
-
-                    // 創建開始和結束時間
-                    final startTime = isAllDay
-                        ? DateTime(selectedDate.year, selectedDate.month, selectedDate.day)
-                        : DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            selectedStartTime.hour,
-                            selectedStartTime.minute,
-                          );
-
-                    DateTime? endTime;
-                    if (!isAllDay && selectedEndTime != null) {
-                      endTime = DateTime(
-                        selectedDate.year,
-                        selectedDate.month,
-                        selectedDate.day,
-                        selectedEndTime!.hour,
-                        selectedEndTime!.minute,
-                      );
-                      // 如果結束時間早於開始時間，調整為第二天
-                      if (endTime.isBefore(startTime)) {
-                        endTime = endTime.add(const Duration(days: 1));
-                      }
-                    }
-
-                    // 提交事件創建
-                    _calendarBloc.add(
-                      CreateSimpleCalendarEvent(
-                        title: title,
-                        startTime: startTime,
-                        endTime: endTime,
-                        isAllDay: isAllDay,
-                        color: selectedColor ?? '#000000',
-                      ),
-                    );
-
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('保存'),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 }

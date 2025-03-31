@@ -61,7 +61,7 @@ class MaiCalendarDataSource extends CalendarDataSource {
   String? getNotes(int index) {
     // 返回事件的位置和來源信息，方便在 UI 中顯示
     final event = _getCalendarEvent(index);
-    return event.locationPath ?? event.sourceDescription;
+    return event.locationPath;
   }
 
   @override

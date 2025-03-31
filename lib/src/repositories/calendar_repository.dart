@@ -1,7 +1,6 @@
 import '../models/index.dart';
 import 'data_source.dart';
 import 'local_mock_data_source.dart';
-import 'package:flutter/material.dart'; // 導入 Flutter 的 Material 庫以使用 Color 類型
 
 /// CalendarRepository 負責處理日曆數據的存取
 class CalendarRepository {
@@ -73,7 +72,7 @@ class CalendarRepository {
   /// [endTime] - 可選，結束時間
   /// [isAllDay] - 是否為全天事件
   /// [color] - 可選，事件顏色
-  Future<CalendarEvent> createSimpleEvent({
+  Future<CalendarEvent> createCalendarEvent({
     required String title,
     required DateTime startTime,
     DateTime? endTime,
@@ -87,7 +86,6 @@ class CalendarRepository {
       endTime: endTime ?? startTime.add(const Duration(hours: 1)),
       isAllDay: isAllDay,
       color: color ?? "#3366FFFF", // 預設藍色
-      source: 'MaiTable',
     );
 
     return createEvent(event);

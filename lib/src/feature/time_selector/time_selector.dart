@@ -127,17 +127,9 @@ class _TimeSelectorState extends State<TimeSelector> {
         onTap: () => _timeSelectorBloc.add(ToggleCalendarDatePicker(!state.isShowTimeSelector)),
         child: Row(
           children: [
-            Icon(
-              Icons.calendar_month_outlined,
-              size: 22,
-              color: Theme.of(context).colorScheme.onSecondary,
-            ),
+            Icon(Icons.calendar_month_outlined, size: 22),
             const SizedBox(width: 2),
-            Icon(
-              Icons.arrow_drop_down,
-              size: 20,
-              color: Theme.of(context).colorScheme.onSecondary,
-            ),
+            Icon(Icons.arrow_drop_down, size: 20),
           ],
         ),
       ),

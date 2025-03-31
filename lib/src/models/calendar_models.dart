@@ -110,7 +110,6 @@ class CalendarEvent {
   final DateTime? endTime; // 結束時間
   final bool isAllDay; // 是否為全天事件
   final String color; // 顏色
-  final String? source; // 來源（MaiTable ID 或其他來源標識）
 
   // 原有的資料來源識別符
   final String? rowId; // 如果事件來自MaiTable，對應的rowId
@@ -140,7 +139,6 @@ class CalendarEvent {
     this.endTime,
     this.isAllDay = false,
     this.color = "#FF4081FF",
-    this.source,
     this.rowId,
     this.columnId,
     // 階層結構資訊
@@ -168,7 +166,6 @@ class CalendarEvent {
       endTime: json['endTime'] != null ? DateTime.parse(json['endTime']) : null,
       isAllDay: json['isAllDay'] ?? false,
       color: json['color'] ?? "#FF4081FF",
-      source: json['source'],
       rowId: json['rowId'],
       columnId: json['columnId'],
       // 階層結構資訊
@@ -192,7 +189,6 @@ class CalendarEvent {
       'endTime': endTime?.toIso8601String(),
       'isAllDay': isAllDay,
       'color': color,
-      'source': source,
       'rowId': rowId,
       'columnId': columnId,
       // 階層結構資訊
@@ -239,7 +235,6 @@ class CalendarEvent {
       endTime: dateTimeValue.endTime,
       isAllDay: !dateTimeValue.includeTime,
       color: dateTimeValue.color,
-      source: 'MaiTable',
       rowId: cell.rowId,
       columnId: cell.columnId,
       // 階層結構資訊
@@ -271,19 +266,6 @@ class CalendarEvent {
     return pathParts.join(' > ');
   }
 
-  /// 判斷事件是否來自MaiTable
-  bool get isFromMaiTable => source == 'MaiTable' && tableId != null;
-
-  /// 獲取事件的來源描述
-  String get sourceDescription {
-    if (isFromMaiTable) {
-      return '來自表格: ${tableName ?? '未知表格'}';
-    } else if (source == 'BoardCalendar') {
-      return '來自版行事曆: ${boardName ?? '未知版'}';
-    } else {
-      return '來自: ${source ?? '未知來源'}';
-    }
-  }
 
   /// 創建帶有更新的欄位的事件副本
   CalendarEvent copyWith({
@@ -317,7 +299,6 @@ class CalendarEvent {
       endTime: endTime ?? this.endTime,
       isAllDay: isAllDay ?? this.isAllDay,
       color: color ?? this.color,
-      source: source ?? this.source,
       rowId: rowId ?? this.rowId,
       columnId: columnId ?? this.columnId,
       baseId: baseId ?? this.baseId,

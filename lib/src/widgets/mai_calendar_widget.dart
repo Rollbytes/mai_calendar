@@ -20,15 +20,12 @@ class MaiCalendarWidget extends StatefulWidget {
   /// 是否允許視圖切換
   final bool allowViewNavigation;
 
-  /// 事件點擊回調
-  final Function(CalendarEvent)? onEventTap;
   final CalendarBloc calendarBloc;
   const MaiCalendarWidget({
     super.key,
     this.initialView = CalendarView.month,
     this.initialDisplayDate,
     this.allowViewNavigation = false,
-    this.onEventTap,
     required this.calendarBloc,
   });
 
@@ -38,13 +35,14 @@ class MaiCalendarWidget extends StatefulWidget {
 
 class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
   late CalendarController _calendarController;
+  late CalendarBloc _calendarBloc;
   DateTime _currentViewDate = DateTime.now();
   CalendarView _currentView = CalendarView.month;
-
   @override
   void initState() {
     super.initState();
-    _calendarController = widget.calendarBloc.calendarController;
+    _calendarBloc = widget.calendarBloc;
+    _calendarController = _calendarBloc.calendarController;
     _currentView = widget.initialView;
     _currentViewDate = widget.initialDisplayDate ?? DateTime.now();
 
@@ -63,7 +61,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     final viewStartDate = _getViewStartDate();
     final viewEndDate = _getViewEndDate();
 
-    context.read<CalendarBloc>().add(
+    _calendarBloc.add(
           LoadCalendarEvents(
             start: viewStartDate,
             end: viewEndDate,
@@ -139,6 +137,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     MaiCalendarEditor.show(
       context: context,
       currentDate: _currentViewDate,
+      calendarBloc: _calendarBloc,
     );
   }
 
@@ -224,6 +223,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
           MaiCalendarEditor.show(
             context: context,
             currentDate: details.date!,
+            calendarBloc: _calendarBloc,
             mode: MaiCalendarBottomSheetMode.edit,
           );
         }

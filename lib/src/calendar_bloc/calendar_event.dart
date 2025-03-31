@@ -24,9 +24,9 @@ class LoadCalendarEvent extends CalendarBlocEvent {
 
 /// 創建新行事曆事件
 class CreateCalendarEvent extends CalendarBlocEvent {
-  final CalendarEvent event;
+  final CalendarEvent calendarEvent;
 
-  const CreateCalendarEvent(this.event);
+  const CreateCalendarEvent(this.calendarEvent);
 }
 
 /// 更新現有行事曆事件
