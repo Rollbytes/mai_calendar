@@ -37,18 +37,38 @@ class MaiCalendarEditor {
     CalendarEvent? eventData, // 當 mode 為 view 時，用於傳遞事件數據
     required CalendarBloc calendarBloc, // 改為必須參數
   }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return _MaiCalendarBottomSheetContent(
-          currentDate: currentDate,
-          mode: mode,
-          eventData: eventData,
-          calendarBloc: calendarBloc, // 傳遞 CalendarBloc
-        );
-      },
+    return Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black54,
+        pageBuilder: (_, __, ___) {
+          return Material(
+            type: MaterialType.transparency,
+            child: SafeArea(
+              bottom: false,
+              child: _MaiCalendarBottomSheetContent(
+                currentDate: currentDate,
+                mode: mode,
+                eventData: eventData,
+                calendarBloc: calendarBloc, // 傳遞 CalendarBloc
+              ),
+            ),
+          );
+        },
+        transitionsBuilder: (_, animation, __, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 1), // 從底部滑入
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: child,
+          );
+        },
+      ),
     );
   }
 }
@@ -58,13 +78,13 @@ class _MaiCalendarBottomSheetContent extends StatefulWidget {
   final DateTime currentDate;
   final MaiCalendarBottomSheetMode mode;
   final CalendarEvent? eventData;
-  final CalendarBloc calendarBloc; // 改為可選
+  final CalendarBloc calendarBloc;
 
   const _MaiCalendarBottomSheetContent({
     required this.currentDate,
     this.mode = MaiCalendarBottomSheetMode.create,
     this.eventData,
-    required this.calendarBloc, // 不再需要 required
+    required this.calendarBloc,
   });
 
   @override
@@ -167,39 +187,74 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
 
   // 構建主要內容
   Widget _buildContent(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.9,
-      snap: true,
-      snapSizes: const [0.5, 0.9],
-      builder: (context, scrollController) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
-            children: [
-              _buildHeader(context),
-              _buildTitleInput(),
-              const SizedBox(height: 4),
-              _buildSpecialTitleCheckbox(),
-              const SizedBox(height: 4),
-              _buildSpaceSelector(),
-              const SizedBox(height: 4),
-              Divider(color: Colors.grey.shade200),
-              Expanded(
-                child: _buildListViewContent(context, scrollController),
-              ),
-            ],
-          ),
-        );
+    final draggableController = DraggableScrollableController();
+
+    return GestureDetector(
+      onVerticalDragUpdate: (details) {
+        if (draggableController.isAttached) {
+          double newSize = draggableController.size - (details.delta.dy / MediaQuery.of(context).size.height);
+          if (newSize >= 0.5 && newSize <= 0.9) {
+            draggableController.jumpTo(newSize);
+          }
+        }
       },
+      child: DraggableScrollableSheet(
+        controller: draggableController,
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        snap: true,
+        snapSizes: const [0.5, 0.9],
+        builder: (context, scrollController) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                  offset: Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 這裡可以讓表單頂部的拖動指示器更明顯，提示用戶可以拖動
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: (details) {
+                    if (draggableController.isAttached) {
+                      double newSize = draggableController.size - (details.delta.dy / MediaQuery.of(context).size.height);
+                      if (newSize >= 0.5 && newSize <= 0.9) {
+                        draggableController.jumpTo(newSize);
+                      }
+                    }
+                  },
+                  child: _buildHeader(context),
+                ),
+                _buildTitleInput(),
+                const SizedBox(height: 4),
+                _buildSpecialTitleCheckbox(),
+                const SizedBox(height: 4),
+                _buildSpaceSelector(),
+                const SizedBox(height: 4),
+                Divider(color: Colors.grey.shade200),
+                Expanded(
+                  child: _buildListViewContent(context, scrollController),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -273,12 +328,14 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   // 構建創建事件內容
   Widget _buildListViewContent(BuildContext context, ScrollController scrollController) {
     return ListView(
-      controller: scrollController,
+      controller: scrollController, // 使用滾動控制器
       padding: const EdgeInsets.all(16),
+      physics: const AlwaysScrollableScrollPhysics(), // 確保總是可滾動
       children: [
         _buildTimeSelector(),
         const SizedBox(height: 16),
         _buildColorPicker(),
+        const SizedBox(height: 100),
       ],
     );
   }

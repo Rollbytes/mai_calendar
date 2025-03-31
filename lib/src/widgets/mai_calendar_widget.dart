@@ -7,6 +7,7 @@ import '../calendar_bloc/calendar_event.dart';
 import '../calendar_bloc/calendar_state.dart';
 import '../models/index.dart';
 import 'mai_calendar_editor.dart';
+import 'mai_calendar_events_of_day_view.dart';
 
 /// Mai Calendar Widget
 /// 一個使用 Syncfusion Calendar 來顯示 Mai.today 行事曆事件的小部件
@@ -62,11 +63,11 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     final viewEndDate = _getViewEndDate();
 
     _calendarBloc.add(
-          LoadCalendarEvents(
-            start: viewStartDate,
-            end: viewEndDate,
-          ),
-        );
+      LoadCalendarEvents(
+        start: viewStartDate,
+        end: viewEndDate,
+      ),
+    );
   }
 
   /// 獲取當前視圖的開始日期
@@ -219,12 +220,22 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       ),
       onTap: (CalendarTapDetails details) {
         if (details.targetElement == CalendarElement.calendarCell && details.date != null) {
-          // 點擊日曆單元格時，使用創建模式打開底部表單
-          MaiCalendarEditor.show(
+          // 點擊日曆單元格時，使用 MaiCalendarDayEvents 顯示當天事件
+          showModalBottomSheet(
             context: context,
-            currentDate: details.date!,
-            calendarBloc: _calendarBloc,
-            mode: MaiCalendarBottomSheetMode.edit,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) {
+              return MaiCalendarEventsOfDayView(
+                selectedDate: details.date!,
+                calendarBloc: _calendarBloc,
+                floatingActionButton: FloatingActionButton(
+                  onPressed: () => MaiCalendarEditor.show(context: context, currentDate: details.date!, calendarBloc: _calendarBloc),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: const Icon(Icons.add, color: Colors.white),
+                ),
+              );
+            },
           );
         }
       },
