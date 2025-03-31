@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mai_calendar/src/feature/time_selector/time_selector.dart';
 import 'package:mai_calendar/src/models/calendar_models.dart' show CalendarEvent;
 import 'package:mai_calendar/src/feature/space_selector/space_selector.dart';
 import 'package:mai_calendar/src/feature/space_selector/space_selector_bloc.dart';
@@ -248,7 +249,9 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
     return ListView(
       controller: scrollController,
       padding: const EdgeInsets.all(16),
-      children: [],
+      children: [
+        _buildTimeSelector(),
+      ],
     );
   }
 
@@ -316,41 +319,6 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
             });
             debugPrint('選擇完成: ${base.name} > ${board.name} > ${table.name} > ${column.name}');
           },
-        ),
-      ],
-    );
-  }
-
-  // 構建日期時間選擇器
-  Widget _buildDateTimePicker() {
-    // 這裡僅顯示一個提示，實際上需要實現完整的日期時間選擇控件
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "選擇時間",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.calendar_today, color: Theme.of(context).primaryColor),
-              const SizedBox(width: 12),
-              Text(
-                widget.currentDate.toLocal().toString().split('.')[0],
-                style: const TextStyle(fontSize: 16),
-              ),
-            ],
-          ),
         ),
       ],
     );
@@ -453,5 +421,10 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  // 構建日期時間選擇器
+  Widget _buildTimeSelector() {
+    return TimeSelector();
   }
 }
