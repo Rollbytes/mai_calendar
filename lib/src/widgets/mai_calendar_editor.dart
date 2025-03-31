@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mai_calendar/src/feature/color_picker/color_picker_bloc.dart';
+import 'package:mai_calendar/src/feature/color_picker/color_picker_widget.dart';
 import 'package:mai_calendar/src/feature/time_selector/time_selector.dart';
+import 'package:mai_calendar/src/feature/time_selector/time_selector_bloc.dart';
+import 'package:mai_calendar/src/feature/time_selector/time_selector_event.dart';
+import 'package:mai_calendar/src/feature/time_selector/time_selector_state.dart';
 import 'package:mai_calendar/src/models/calendar_models.dart' show CalendarEvent;
 import 'package:mai_calendar/src/feature/space_selector/space_selector.dart';
 import 'package:mai_calendar/src/feature/space_selector/space_selector_bloc.dart';
@@ -68,6 +73,14 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   late TextEditingController _titleTextEditingController;
   bool _isSpecialTitle = false; // 添加狀態變量來追踪是否有特殊標題
   bool _isSaving = false; // 是否正在保存
+  late ColorPickerBloc _colorPickerBloc;
+  String? _selectedColor; // 添加本地狀態存儲選擇的顏色
+
+  // 時間選擇相關狀態
+  late DateTime _startTime;
+  DateTime? _endTime;
+  bool _isAllDay = false;
+  late TimeSelectorBloc _timeSelectorBloc;
 
   // 空間選擇相關狀態
   Base? _selectedBase;
@@ -93,12 +106,30 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
       _repository = CalendarRepository();
     }
 
-    // 初始化 SpaceSelectorBloc
+    // 初始化 SpaceSelectorBloc 和 ColorPickerBloc
     _spaceSelectorBloc = SpaceSelectorBloc(repository: _repository);
+    _colorPickerBloc = ColorPickerBloc();
+    _timeSelectorBloc = TimeSelectorBloc();
+
+    // 初始化時間
+    _startTime = widget.currentDate;
+    _endTime = widget.currentDate.add(const Duration(hours: 1));
 
     // 如果有現有事件，初始化相關狀態
     if (widget.eventData != null) {
       _titleTextEditingController.text = widget.eventData!.title;
+      _selectedColor = widget.eventData!.color; // 初始化顏色
+      _startTime = widget.eventData!.startTime;
+      _endTime = widget.eventData!.endTime;
+      _isAllDay = widget.eventData!.isAllDay;
+
+      // 更新 TimeSelectorBloc 的狀態
+      _timeSelectorBloc.add(UpdateStartTime(_startTime));
+      if (_endTime != null) {
+        _timeSelectorBloc.add(ToggleEndTime(true));
+        _timeSelectorBloc.add(UpdateEndTime(_endTime!));
+      }
+      _timeSelectorBloc.add(ToggleShowTimeButton(!_isAllDay));
     }
   }
 
@@ -106,6 +137,8 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   void dispose() {
     _titleTextEditingController.dispose();
     _spaceSelectorBloc.close(); // 關閉 SpaceSelectorBloc
+    _colorPickerBloc.close(); // 關閉 ColorPickerBloc
+    _timeSelectorBloc.close(); // 關閉 TimeSelectorBloc
     super.dispose();
   }
 
@@ -165,7 +198,7 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
               const SizedBox(height: 4),
               Divider(color: Colors.grey.shade200),
               Expanded(
-                child: _buildCreateEventContent(context, scrollController),
+                child: _buildListViewContent(context, scrollController),
               ),
             ],
           ),
@@ -245,12 +278,14 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   }
 
   // 構建創建事件內容
-  Widget _buildCreateEventContent(BuildContext context, ScrollController scrollController) {
+  Widget _buildListViewContent(BuildContext context, ScrollController scrollController) {
     return ListView(
       controller: scrollController,
       padding: const EdgeInsets.all(16),
       children: [
         _buildTimeSelector(),
+        const SizedBox(height: 16),
+        _buildColorPicker(),
       ],
     );
   }
@@ -353,14 +388,18 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
     // 創建或更新事件
     final CalendarEvent newEvent = widget.eventData?.copyWith(
           title: _titleTextEditingController.text,
+          color: _selectedColor, // 使用本地狀態中的顏色
+          startTime: _startTime, // 使用選擇的開始時間
+          endTime: _endTime, // 使用選擇的結束時間
+          isAllDay: _isAllDay, // 使用選擇的全天事件狀態
         ) ??
         CalendarEvent(
           id: DateTime.now().millisecondsSinceEpoch.toString(), // 生成臨時ID
           title: _titleTextEditingController.text,
-          startTime: widget.currentDate,
-          endTime: widget.currentDate.add(const Duration(hours: 1)),
-          isAllDay: false,
-          color: "#3366FFFF", // 預設藍色
+          startTime: _startTime, // 使用選擇的開始時間
+          endTime: _endTime, // 使用選擇的結束時間
+          isAllDay: _isAllDay, // 使用選擇的全天事件狀態
+          color: _selectedColor ?? "#3366FFFF", // 使用選擇的顏色或預設藍色
           source: 'MaiTable',
         );
 
@@ -425,6 +464,30 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
 
   // 構建日期時間選擇器
   Widget _buildTimeSelector() {
-    return TimeSelector();
+    return BlocListener<TimeSelectorBloc, TimeSelectorState>(
+      bloc: _timeSelectorBloc,
+      listener: (context, state) {
+        setState(() {
+          _startTime = state.selectedStartTime;
+          _endTime = state.hasEndTime ? state.selectedEndTime : null;
+          _isAllDay = !state.showTimeButton;
+        });
+      },
+      child: TimeSelector(
+        timeSelectorBloc: _timeSelectorBloc,
+      ),
+    );
+  }
+
+  Widget _buildColorPicker() {
+    return ColorPickerWidget(
+      colorPickerBloc: _colorPickerBloc,
+      initialColor: _selectedColor ?? widget.eventData?.color, // 使用本地狀態或初始值
+      onColorChanged: (color) {
+        setState(() {
+          _selectedColor = color; // 更新本地狀態而非 widget.eventData
+        });
+      },
+    );
   }
 }
