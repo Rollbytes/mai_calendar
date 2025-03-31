@@ -188,72 +188,123 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   // 構建主要內容
   Widget _buildContent(BuildContext context) {
     final draggableController = DraggableScrollableController();
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    return GestureDetector(
-      onVerticalDragUpdate: (details) {
-        if (draggableController.isAttached) {
-          double newSize = draggableController.size - (details.delta.dy / MediaQuery.of(context).size.height);
-          if (newSize >= 0.5 && newSize <= 0.9) {
-            draggableController.jumpTo(newSize);
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // 當列表達到頂部且繼續向下滑動時，控制整個表單高度
+        if (notification is ScrollUpdateNotification && notification.metrics.pixels <= 0 && notification.dragDetails != null) {
+          if (draggableController.isAttached) {
+            double delta = notification.dragDetails!.delta.dy;
+            double newSize = draggableController.size - (delta / screenHeight);
+            if (newSize >= 0.5 && newSize <= 0.9) {
+              draggableController.animateTo(
+                newSize,
+                duration: const Duration(milliseconds: 1),
+                curve: Curves.linear,
+              );
+              return true; // 攔截滾動事件
+            }
           }
         }
+        return false; // 不攔截其他滾動事件
       },
-      child: DraggableScrollableSheet(
-        controller: draggableController,
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        snap: true,
-        snapSizes: const [0.5, 0.9],
-        builder: (context, scrollController) {
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 10,
-                  spreadRadius: 0,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 這裡可以讓表單頂部的拖動指示器更明顯，提示用戶可以拖動
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: (details) {
-                    if (draggableController.isAttached) {
-                      double newSize = draggableController.size - (details.delta.dy / MediaQuery.of(context).size.height);
-                      if (newSize >= 0.5 && newSize <= 0.9) {
-                        draggableController.jumpTo(newSize);
-                      }
-                    }
-                  },
-                  child: _buildHeader(context),
-                ),
-                _buildTitleInput(),
-                const SizedBox(height: 4),
-                _buildSpecialTitleCheckbox(),
-                const SizedBox(height: 4),
-                _buildSpaceSelector(),
-                const SizedBox(height: 4),
-                Divider(color: Colors.grey.shade200),
-                Expanded(
-                  child: _buildListViewContent(context, scrollController),
-                ),
-              ],
-            ),
-          );
+      child: GestureDetector(
+        // 使用更敏感的拖動檢測
+        onVerticalDragUpdate: (details) {
+          if (draggableController.isAttached) {
+            // 計算新的尺寸，更平滑的響應
+            double delta = details.delta.dy;
+            double newSize = draggableController.size - (delta / screenHeight);
+            // 限制在允許範圍內
+            newSize = newSize.clamp(0.5, 0.9);
+
+            // 使用animateTo而不是jumpTo，但設置非常短的動畫時間
+            draggableController.animateTo(
+              newSize,
+              duration: const Duration(milliseconds: 1),
+              curve: Curves.linear,
+            );
+          }
         },
+        // 添加拖動結束處理，實現慣性效果
+        onVerticalDragEnd: (details) {
+          if (draggableController.isAttached) {
+            // 獲取當前尺寸
+            final currentSize = draggableController.size;
+            // 計算目標尺寸（根據速度和當前位置決定滑動到哪個snap點）
+            final double velocity = details.primaryVelocity ?? 0;
+
+            double targetSize;
+            if (velocity > 500) {
+              // 快速向下滑動
+              targetSize = 0.5;
+            } else if (velocity < -500) {
+              // 快速向上滑動
+              targetSize = 0.9;
+            } else {
+              // 緩慢滑動，根據當前位置決定
+              targetSize = currentSize > 0.7 ? 0.9 : 0.5;
+            }
+            // 平滑過渡到目標尺寸
+            draggableController.animateTo(
+              targetSize,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        },
+        child: DraggableScrollableSheet(
+          controller: draggableController,
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          snap: true,
+          snapAnimationDuration: const Duration(milliseconds: 300),
+          snapSizes: const [0.5, 0.9],
+          builder: (context, scrollController) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    spreadRadius: 0,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 優化表單頂部的拖動指示器
+                  GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    child: _buildHeader(context),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildTitleInput(),
+                  const SizedBox(height: 4),
+                  _buildSpecialTitleCheckbox(),
+                  const SizedBox(height: 4),
+                  _buildSpaceSelector(),
+                  const SizedBox(height: 4),
+                  Divider(color: Colors.grey.shade200),
+                  Expanded(
+                    child: _buildListViewContent(context, scrollController),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
