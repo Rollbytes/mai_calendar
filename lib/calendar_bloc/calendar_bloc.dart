@@ -25,10 +25,7 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
   }
 
   /// 處理加載多個事件的事件
-  Future<void> _onLoadCalendarEvents(
-    LoadCalendarEvents event,
-    Emitter<CalendarState> emit,
-  ) async {
+  Future<void> _onLoadCalendarEvents(LoadCalendarEvents event, Emitter<CalendarState> emit) async {
     try {
       emit(CalendarEventsLoading());
       final events = await _repository.getEvents(

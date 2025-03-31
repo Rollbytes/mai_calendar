@@ -23,6 +23,20 @@ class LocalMockDataSource implements DataSource {
     _generateMockData();
   }
 
+  // 定義預設的顏色列表
+  final List<String> _predefinedColors = [
+    '#FF6B6B', // 紅色
+    '#FF7878', // 粉紅色
+    '#FF8C66', // 橙色
+    '#FFA366', // 杏橙色
+    '#FFC847', // 明亮黃
+    '#66C589', // 翠綠色
+    '#6B8EFF', // 湛藍色
+    '#759AD4', // 淡藍色
+    '#937ACD', // 紫色
+    '#B98ED8', // 薰衣草紫
+  ];
+
   void _generateMockData() {
     final now = DateTime.now();
     final userId = 'user_001';
@@ -102,8 +116,8 @@ class LocalMockDataSource implements DataSource {
       _columns[column.id] = column;
     }
 
-    // 創建幾個模擬的行
-    final rowTitles = ['週一例會', '專案啟動會議', '產品評審'];
+    // 創建更多模擬的行
+    final rowTitles = ['週一例會', '專案啟動會議', '產品評審', '客戶會議', '團隊週報', '技術討論', '設計評審', '進度追蹤', '資源分配', '風險評估'];
     final rows = [];
 
     for (int i = 0; i < rowTitles.length; i++) {
@@ -120,22 +134,42 @@ class LocalMockDataSource implements DataSource {
       rows.add(row);
     }
 
-    // 創建幾個模擬的行事曆事件
-    for (int i = 0; i < 10; i++) {
+    // 創建更多模擬的行事曆事件
+    final numberOfEvents = 30; // 增加事件數量
+    for (int i = 0; i < numberOfEvents; i++) {
       final eventId = _generateId();
-      final rowId = 'row_${i % 3 + 1}'; // 使用3個不同的row
-      final columnId = 'col_${(i % 2) + 2}'; // 使用col_2和col_3，col_1是標題列不存日期
+      final rowId = 'row_${(i % rowTitles.length) + 1}'; // 使用所有可用的row
+      final columnId = 'col_${(i % 2) + 2}'; // 使用col_2和col_3
       final row = _rows[rowId];
       final column = _columns[columnId];
+
+      // 生成隨機的開始時間（在過去30天到未來30天之間）
+      final randomDays = _random.nextInt(61) - 30; // -30 到 30 天
+      final randomHours = _random.nextInt(24); // 0 到 23 小時
+      final randomMinutes = _random.nextInt(60); // 0 到 59 分鐘
+
+      final startTime = now.add(Duration(
+        days: randomDays,
+        hours: randomHours,
+        minutes: randomMinutes,
+      ));
+
+      // 隨機決定事件持續時間（30分鐘到4小時）
+      final durationHours = _random.nextInt(4) + 1; // 1 到 4 小時
+      final durationMinutes = _random.nextInt(60); // 0 到 59 分鐘
+      final endTime = startTime.add(Duration(
+        hours: durationHours,
+        minutes: durationMinutes,
+      ));
 
       // 創建行事曆事件
       final event = CalendarEvent(
         id: eventId,
-        title: rowTitles[i % 3], // 使用row標題作為事件標題
-        startTime: now.add(Duration(days: i)),
-        endTime: now.add(Duration(days: i, hours: 2)),
-        isAllDay: i % 2 != 0, // 一半是全天事件
-        color: '#${_randomColor()}FF', // 隨機顏色
+        title: rowTitles[i % rowTitles.length],
+        startTime: startTime,
+        endTime: endTime,
+        isAllDay: _random.nextBool(), // 隨機決定是否為全天事件
+        color: '${_predefinedColors[i % _predefinedColors.length]}FF',
         source: 'MaiTable',
         rowId: rowId,
         columnId: columnId,
@@ -160,11 +194,9 @@ class LocalMockDataSource implements DataSource {
     }
   }
 
-  // 生成隨機顏色
+  // 生成隨機顏色 - 從預設的顏色列表中取得
   String _randomColor() {
-    return '${_random.nextInt(256).toRadixString(16).padLeft(2, '0')}'
-        '${_random.nextInt(256).toRadixString(16).padLeft(2, '0')}'
-        '${_random.nextInt(256).toRadixString(16).padLeft(2, '0')}';
+    return _predefinedColors[_random.nextInt(_predefinedColors.length)];
   }
 
   @override
