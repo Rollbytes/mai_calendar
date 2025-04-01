@@ -28,6 +28,9 @@ class UpdateGroupedItems extends CalendarSortEvent {
   UpdateGroupedItems({required this.sortType});
 }
 
+// 清除排序事件
+class ClearSorting extends CalendarSortEvent {}
+
 // 獲取行程來源資訊
 class FetchBoardInfo extends CalendarSortEvent {
   final List<CalendarEvent> items;

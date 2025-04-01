@@ -5,11 +5,13 @@ import 'package:lunar/lunar.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_state.dart';
 import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_bloc.dart';
+import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_button.dart';
 import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_event.dart';
 import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_state.dart';
 import 'package:mai_calendar/src/feature/color_picker/hex_color_adapter.dart';
 import 'package:mai_calendar/src/models/calendar_models.dart';
 import 'mai_calendar_appointment_detail_view.dart';
+import 'package:mai_calendar/src/feature/color_picker/color_picker_state.dart';
 
 /// 行事曆日期事件列表
 /// 用於顯示某一天的所有行程
@@ -82,6 +84,8 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
   final ScrollController _scrollController = ScrollController();
   late CalendarSortBloc _calendarSortBloc;
   bool _isScrollAnimating = false;
+  // 添加顏色映射
+  final Map<String, String> _colorNames = ColorPickerState.initial().availableColors;
 
   @override
   void initState() {
@@ -277,8 +281,7 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
           return const Center(child: CircularProgressIndicator());
         }
 
-        // 當未分組或是Time排序時，顯示普通列表
-        if (sortState.groupedItems.isEmpty || sortState.sortType == CalendarSortType.time) {
+        if (sortState.sortType == CalendarSortType.none) {
           return _buildEventList(scrollController, events);
         }
 
@@ -294,8 +297,6 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
     return ListView.builder(
       controller: scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
-      shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: groupKeys.length,
       itemBuilder: (context, groupIndex) {
         final groupKey = groupKeys[groupIndex];
@@ -313,7 +314,7 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
                 }
               },
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16),
                 child: Row(
                   children: [
                     if (sortState.sortType == CalendarSortType.color)
@@ -329,7 +330,12 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
                       ),
                     Expanded(
                       child: Text(
-                        groupKey,
+                        // 根據不同的排序類型顯示不同的標題格式
+                        sortState.sortType == CalendarSortType.color
+                            ? _colorNames[groupKey] ?? groupKey // 如果是顏色排序，顯示顏色名稱
+                            : sortState.sortType == CalendarSortType.time
+                                ? _formatTimeGroupTitle(groupKey) // 如果是時間排序，格式化時間顯示
+                                : groupKey, // 其他情況直接顯示原始值
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
@@ -356,6 +362,7 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
             if (sortState.expandedGroups.contains(groupKey))
               ListView.separated(
                 separatorBuilder: (context, index) => const SizedBox(height: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
                 itemCount: groupItems.length,
@@ -411,134 +418,10 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
             ),
           ),
         ),
-        _buildSortButton(),
+        CalendarSortButton(
+          calendarSortBloc: _calendarSortBloc,
+        ),
       ],
-    );
-  }
-
-  Widget _buildSortButton() {
-    return BlocBuilder<CalendarSortBloc, CalendarSortState>(
-      bloc: _calendarSortBloc,
-      builder: (context, sortState) {
-        return PopupMenuButton<CalendarSortType?>(
-          tooltip: '',
-          color: Colors.white,
-          offset: const Offset(0, 32),
-          constraints: const BoxConstraints(
-            minWidth: 80,
-            maxWidth: 130,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Icon(
-              Icons.swap_vert_outlined,
-              color: Colors.black,
-              size: 24,
-            ),
-          ),
-          itemBuilder: (BuildContext context) => [
-            const PopupMenuItem<CalendarSortType?>(
-              enabled: false,
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.swap_vert_outlined, color: Colors.black, size: 18),
-                    SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '排序方式',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.normal,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            PopupMenuItem<CalendarSortType?>(
-              value: CalendarSortType.time,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: sortState.sortType == CalendarSortType.time && sortState.groupedItems.isNotEmpty ? Colors.blue.withOpacity(0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: Text(
-                  '時間',
-                  style: TextStyle(
-                    color: sortState.sortType == CalendarSortType.time && sortState.groupedItems.isNotEmpty ? Colors.blue[800] : Colors.black,
-                    fontWeight: sortState.sortType == CalendarSortType.time && sortState.groupedItems.isNotEmpty ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-            ),
-            PopupMenuItem<CalendarSortType?>(
-              value: CalendarSortType.color,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: sortState.sortType == CalendarSortType.color ? Colors.blue.withOpacity(0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: Text(
-                  '顏色',
-                  style: TextStyle(
-                    color: sortState.sortType == CalendarSortType.color ? Colors.blue[800] : Colors.black,
-                    fontWeight: sortState.sortType == CalendarSortType.color ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-            ),
-            PopupMenuItem<CalendarSortType?>(
-              value: CalendarSortType.board,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: sortState.sortType == CalendarSortType.board ? Colors.blue.withOpacity(0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: Text(
-                  '來源',
-                  style: TextStyle(
-                    color: sortState.sortType == CalendarSortType.board ? Colors.blue[800] : Colors.black,
-                    fontWeight: sortState.sortType == CalendarSortType.board ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-            ),
-            if (sortState.groupedItems.isNotEmpty)
-              PopupMenuItem<CalendarSortType?>(
-                value: null, // 使用null表示取消排序
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: const Text(
-                    '取消排序',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ),
-          ],
-          onSelected: (CalendarSortType? value) {
-            if (value == null) {
-              // 取消排序，清空分組
-              _calendarSortBloc.add(ItemsUpdated(_getEventsOfDay(widget.calendarBloc.state.events)));
-            } else {
-              _calendarSortBloc.add(SortTypeChanged(value));
-            }
-          },
-        );
-      },
     );
   }
 
@@ -669,5 +552,21 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
       event: event,
       calendarBloc: widget.calendarBloc,
     );
+  }
+
+  // 用於格式化時間分組標題的方法
+  String _formatTimeGroupTitle(String timeString) {
+    // 檢查格式是否為"HH:mm"(24小時制)
+    RegExp timeRegex = RegExp(r'^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$');
+    if (timeRegex.hasMatch(timeString)) {
+      final parts = timeString.split(':');
+      final hour = int.parse(parts[0]);
+
+      // 不考慮分鐘，只顯示小時整點，格式為XAM/XPM
+      final amPm = hour < 12 ? 'AM' : 'PM';
+      final displayHour = hour == 0 ? 12 : (hour <= 12 ? hour : hour - 12);
+      return '$displayHour:00 $amPm';
+    }
+    return timeString;
   }
 }

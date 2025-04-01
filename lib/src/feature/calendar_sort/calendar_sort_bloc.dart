@@ -29,6 +29,7 @@ class CalendarSortBloc extends Bloc<CalendarSortEvent, CalendarSortState> {
     on<UpdateGroupedItems>(_onUpdateGroupedItems);
     on<FetchBoardInfo>(_onFetchBoardInfo);
     on<FetchSourceInfo>(_onFetchSourceInfo);
+    on<ClearSorting>(_onClearSorting);
   }
 
   List<CalendarEvent> _getFilteredItemsByDate(List<CalendarEvent> items) {
@@ -70,6 +71,10 @@ class CalendarSortBloc extends Bloc<CalendarSortEvent, CalendarSortState> {
     final grouped = <String, List<CalendarEvent>>{};
 
     switch (event.sortType) {
+      case CalendarSortType.none:
+        // 不排序，保持空的groupedItems
+        break;
+
       case CalendarSortType.time:
         final formatter = DateFormat('HH:mm');
         for (final item in state.items) {
@@ -106,6 +111,14 @@ class CalendarSortBloc extends Bloc<CalendarSortEvent, CalendarSortState> {
 
   void _onFetchBoardInfo(FetchBoardInfo event, Emitter<CalendarSortState> emit) {
     add(ItemsUpdated(event.items));
+  }
+
+  void _onClearSorting(ClearSorting event, Emitter<CalendarSortState> emit) {
+    emit(state.copyWith(
+      groupedItems: {},
+      sortType: CalendarSortType.none,
+      status: CalendarSortStatus.loaded,
+    ));
   }
 
   @override

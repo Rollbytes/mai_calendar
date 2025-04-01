@@ -4,6 +4,7 @@ import 'package:mai_calendar/src/models/calendar_models.dart';
 enum CalendarSortStatus { initial, loading, loaded, error }
 
 enum CalendarSortType {
+  none, // 無排序
   time, // 按時間排序
   color, // 按顏色排序
   board, // 按來源排序
@@ -18,7 +19,7 @@ class CalendarSortState extends Equatable {
   final List<CalendarEvent> items;
 
   const CalendarSortState({
-    this.sortType = CalendarSortType.time,
+    this.sortType = CalendarSortType.none,
     this.groupedItems = const {},
     this.expandedGroups = const {},
     this.columnToBoardMap = const {},
@@ -39,7 +40,7 @@ class CalendarSortState extends Equatable {
   // 初始化方法
   factory CalendarSortState.init() {
     return CalendarSortState(
-      sortType: CalendarSortType.time,
+      sortType: CalendarSortType.none,
       groupedItems: {},
       expandedGroups: {},
       items: [],
