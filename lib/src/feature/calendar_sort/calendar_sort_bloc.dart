@@ -9,19 +9,12 @@ import 'calendar_sort_state.dart';
 
 class CalendarSortBloc extends Bloc<CalendarSortEvent, CalendarSortState> {
   StreamSubscription<List<CalendarEvent>>? _itemsSubscription;
-  final Stream<List<CalendarEvent>> Function() _itemsStream;
   DateTime? _selectedDate;
 
   CalendarSortBloc({
-    required Stream<List<CalendarEvent>> Function() itemsStream,
     DateTime? selectedDate,
-  })  : _itemsStream = itemsStream,
-        _selectedDate = selectedDate,
+  })  : _selectedDate = selectedDate,
         super(CalendarSortState.init()) {
-    _itemsSubscription = _itemsStream().listen((items) {
-      add(ItemsUpdated(_getFilteredItemsByDate(items)));
-    });
-
     on<SortTypeChanged>(_onSortTypeChanged);
     on<GroupExpanded>(_onGroupExpanded);
     on<GroupCollapsed>(_onGroupCollapsed);

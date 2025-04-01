@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // 確保鍵盤彈出時調整畫面
+      resizeToAvoidBottomInset: false, // 確保鍵盤彈出時調整畫面
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,

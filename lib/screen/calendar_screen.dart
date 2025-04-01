@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:mai_calendar/src/feature/calendar_search/calendar_search_bloc.dart';
+import 'package:mai_calendar/src/feature/calendar_search/calendar_search_result_view.dart';
+import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_bloc.dart';
 import 'package:mai_calendar/src/feature/sf_calendar_date_picker/sf_calendar_date_picker.dart';
 import 'package:mai_calendar/src/feature/sf_calendar_date_picker/sf_calendar_date_picker_cubit.dart';
 import 'package:mai_calendar/src/feature/sf_calendar_date_picker/sf_calendar_date_picker_state.dart';
@@ -402,6 +405,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 children: [
                   IconButton(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    onPressed: () => _navigateToSearchPage(context),
+                    icon: const Icon(Icons.search, size: 24),
+                  ),
+                  IconButton(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     onPressed: _jumpToToday,
                     icon: const Icon(Icons.today, size: 24),
                   ),
@@ -416,6 +424,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// 導航到搜尋頁面
+  void _navigateToSearchPage(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CalendarSearchResultView(
+          calendarSearchBloc: CalendarSearchBloc(calendarRepository: _repository),
+          calendarSortBloc: CalendarSortBloc(),
+        ),
+      ),
     );
   }
 }
