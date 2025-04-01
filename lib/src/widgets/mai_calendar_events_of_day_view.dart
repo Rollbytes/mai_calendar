@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:lunar/lunar.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_state.dart';
 import 'package:mai_calendar/src/feature/color_picker/hex_color_adapter.dart';
@@ -220,6 +221,9 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
   }
 
   Widget _buildDateHeader() {
+    final lunarMonth = Lunar.fromDate(widget.selectedDate).getMonth();
+    final lunarDay = Lunar.fromDate(widget.selectedDate).getDay();
+
     return Padding(
       padding: const EdgeInsets.only(left: 16.0, right: 16.0),
       child: Row(
@@ -231,6 +235,14 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
               Text(
                 _formatDate(widget.selectedDate),
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '農曆$lunarMonth.$lunarDay',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
               ),
             ],
           ),

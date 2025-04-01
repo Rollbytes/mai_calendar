@@ -126,26 +126,33 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
       _colorPickerBloc.add(SelectColor(widget.eventData!.color));
     }
 
-    _timeSelectorBloc = TimeSelectorBloc();
+    // 確定初始日期
+    final initialDate = widget.eventData?.startTime ?? widget.currentDate;
 
-    // 初始化時間
-    _startTime = widget.currentDate;
-    _endTime = widget.currentDate.add(const Duration(hours: 1));
+    // 初始化 TimeSelectorBloc，直接使用初始日期
+    _timeSelectorBloc = TimeSelectorBloc(initialDate: initialDate);
 
-    // 如果有現有事件，初始化相關狀態
     if (widget.eventData != null) {
+      // 如果是編輯現有事件，使用事件的數據初始化
       _titleTextEditingController.text = widget.eventData!.title;
       _startTime = widget.eventData!.startTime;
       _endTime = widget.eventData!.endTime;
       _isAllDay = widget.eventData!.isAllDay;
 
-      // 更新 TimeSelectorBloc 的狀態
-      _timeSelectorBloc.add(UpdateStartTime(_startTime));
+      // 更新其他 TimeSelectorBloc 的狀態
       if (_endTime != null) {
         _timeSelectorBloc.add(ToggleEndTime(true));
         _timeSelectorBloc.add(UpdateEndTime(_endTime!));
       }
       _timeSelectorBloc.add(ToggleShowTimeButton(!_isAllDay));
+    } else {
+      // 新增事件時的初始設定
+      _startTime = initialDate;
+      _endTime = initialDate.add(const Duration(hours: 1));
+
+      // 設置結束時間
+      _timeSelectorBloc.add(ToggleEndTime(true));
+      _timeSelectorBloc.add(UpdateEndTime(_endTime!));
     }
   }
 

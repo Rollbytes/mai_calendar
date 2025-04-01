@@ -3,7 +3,13 @@ import 'time_selector_event.dart';
 import 'time_selector_state.dart';
 
 class TimeSelectorBloc extends Bloc<TimeSelectorEvent, TimeSelectorState> {
-  TimeSelectorBloc() : super(TimeSelectorState.initial()) {
+  TimeSelectorBloc({DateTime? initialDate})
+      : super(initialDate != null
+            ? TimeSelectorState(
+                selectedStartTime: initialDate,
+                calendarTimePickerDisplayedMonthDate: initialDate,
+              )
+            : TimeSelectorState.initial()) {
     on<ToggleEndTime>(_onToggleEndTime);
     on<ToggleCalendarDatePicker>(_onToggleTimeSelector);
     on<UpdateStartTime>(_onUpdateStartTime);
@@ -94,7 +100,8 @@ class TimeSelectorBloc extends Bloc<TimeSelectorEvent, TimeSelectorState> {
   }
 
   void _onUpdateDisplayedMonthDate(UpdateDisplayedMonthDate event, Emitter<TimeSelectorState> emit) {
-    emit(state.copyWith(calendarTimePickerDisplayedMonthDate: event.displayedMonthDate, selectedStartTime: event.displayedMonthDate, selectedEndTime: state.selectedEndTime));
+    emit(state.copyWith(
+        calendarTimePickerDisplayedMonthDate: event.displayedMonthDate, selectedStartTime: event.displayedMonthDate, selectedEndTime: state.selectedEndTime));
   }
 
   void _onToggleIsSelectingEndDate(ToggleIsSelectingEndDate event, Emitter<TimeSelectorState> emit) {
