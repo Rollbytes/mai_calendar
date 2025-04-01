@@ -8,6 +8,7 @@ import '../calendar_bloc/calendar_event.dart' as bloc_event;
 import '../calendar_bloc/calendar_state.dart';
 import 'mai_calendar_editor.dart';
 import 'mai_calendar_events_of_day_view.dart';
+import 'mai_calendar_appointment_builder.dart';
 
 /// Mai Calendar Widget
 /// 一個使用 Syncfusion Calendar 來顯示 Mai.today 行事曆事件的小部件
@@ -116,8 +117,9 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
+          // 日期部分
+          Container(
+            padding: const EdgeInsets.only(top: 4.0),
             child: Text(
               '${details.date.day}',
               style: TextStyle(
@@ -127,11 +129,17 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
               ),
             ),
           ),
+          // 農曆日期
           if (_showLunarDate)
-            Text(
-              "$lunarMonth/$lunarDay",
-              style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Container(
+              padding: const EdgeInsets.only(bottom: 2.0),
+              child: Text(
+                "$lunarMonth/$lunarDay",
+                style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
             ),
+          // 為行程事件預留空間
+          SizedBox(height: _showLunarDate ? 4.0 : 2.0),
         ],
       ),
     );
@@ -257,13 +265,19 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       allowViewNavigation: widget.allowViewNavigation,
       showNavigationArrow: false,
       showWeekNumber: false,
+      appointmentBuilder: (context, details) => MaiCalendarAppointmentBuilder(
+        viewType: _currentView,
+        details: details,
+        calendarBloc: _calendarBloc,
+      ),
       headerHeight: 0,
       viewHeaderStyle: const ViewHeaderStyle(
         dayTextStyle: TextStyle(fontWeight: FontWeight.w500),
         dateTextStyle: TextStyle(fontWeight: FontWeight.bold),
       ),
+      cellEndPadding: 8, // 減小下方填充，留更多空間給行程標題
       monthViewSettings: MonthViewSettings(
-        appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+        appointmentDisplayMode: MonthAppointmentDisplayMode.appointment, // 維持原有的行程顯示模式
         showAgenda: false,
         appointmentDisplayCount: _appointmentDisplayCount,
         agendaStyle: const AgendaStyle(
@@ -272,6 +286,12 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
+        ),
+        // 調整月視圖的設置
+        navigationDirection: MonthNavigationDirection.horizontal,
+        monthCellStyle: MonthCellStyle(
+          leadingDatesBackgroundColor: Colors.grey[100],
+          trailingDatesBackgroundColor: Colors.grey[100],
         ),
       ),
       timeSlotViewSettings: const TimeSlotViewSettings(

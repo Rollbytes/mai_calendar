@@ -216,24 +216,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.menu),
-                          onPressed: () {
-                            // 顯示側邊欄或其他操作
-                          },
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // 顯示日期選擇器
-                          },
-                          child: Text(
-                            DateFormat('yyyy年MM月', 'zh_TW').format(DateTime.now()),
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ],
+                    TextButton(
+                      onPressed: () {
+                        // 顯示日期選擇器
+                      },
+                      child: Text(
+                        DateFormat('yyyy年MM月', 'zh_TW').format(DateTime.now()),
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.more_vert),
