@@ -188,13 +188,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       allowViewNavigation: widget.allowViewNavigation,
       showNavigationArrow: false,
       showWeekNumber: false,
-      headerStyle: const CalendarHeaderStyle(
-        textAlign: TextAlign.center,
-        textStyle: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      headerHeight: 0,
       viewHeaderStyle: const ViewHeaderStyle(
         dayTextStyle: TextStyle(fontWeight: FontWeight.w500),
         dateTextStyle: TextStyle(fontWeight: FontWeight.bold),
