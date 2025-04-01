@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_state.dart';
+import 'package:mai_calendar/src/feature/color_picker/hex_color_adapter.dart';
 import 'package:mai_calendar/src/models/calendar_models.dart';
 import 'mai_calendar_editor.dart';
 
@@ -220,17 +221,18 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
 
   Widget _buildDateHeader() {
     return Padding(
-      padding: const EdgeInsets.only(left: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.only(left: 16.0, right: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Text(
-            _formatDate(widget.selectedDate),
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            "${widget.selectedDate.day}日",
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _formatDate(widget.selectedDate),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
         ],
       ),
@@ -302,7 +304,7 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
               width: 4,
               height: 40,
               decoration: BoxDecoration(
-                color: _parseColor(event.color),
+                color: HexColor(event.color),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -328,23 +330,6 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
         ),
       ),
     );
-  }
-
-  Color _parseColor(String hexColor) {
-    try {
-      if (hexColor.startsWith('#')) {
-        String colorStr = hexColor.substring(1);
-        if (colorStr.length == 6) {
-          colorStr = 'FF$colorStr'; // 添加不透明度
-        } else if (colorStr.length == 8) {
-          // 已經有不透明度，不需要處理
-        }
-        return Color(int.parse(colorStr, radix: 16));
-      }
-      return Colors.blue; // 默認顏色
-    } catch (e) {
-      return Colors.blue; // 發生錯誤時返回默認顏色
-    }
   }
 
   Widget _buildTimeDisplay(DateTime startTime, DateTime? endTime) {

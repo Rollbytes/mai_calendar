@@ -3,6 +3,7 @@ import 'dart:math';
 
 import '../models/index.dart';
 import 'data_source.dart';
+import 'mai_calendar_data_source.dart';
 
 /// 本地模擬數據源，用於開發和測試
 class LocalMockDataSource implements DataSource {
@@ -23,19 +24,8 @@ class LocalMockDataSource implements DataSource {
     _generateMockData();
   }
 
-  // 定義預設的顏色列表
-  final List<String> _predefinedColors = [
-    '#FF6B6B', // 紅色
-    '#FF7878', // 粉紅色
-    '#FF8C66', // 橙色
-    '#FFA366', // 杏橙色
-    '#FFC847', // 明亮黃
-    '#66C589', // 翠綠色
-    '#6B8EFF', // 湛藍色
-    '#759AD4', // 淡藍色
-    '#937ACD', // 紫色
-    '#B98ED8', // 薰衣草紫
-  ];
+  // 使用MaiCalendarDataSource中的預設顏色列表
+  Map<String, String> get _predefinedColors => MaiCalendarDataSource.predefinedColors;
 
   void _generateMockData() {
     final now = DateTime.now();
@@ -169,7 +159,7 @@ class LocalMockDataSource implements DataSource {
         startTime: startTime,
         endTime: endTime,
         isAllDay: _random.nextBool(), // 隨機決定是否為全天事件
-        color: '${_predefinedColors[i % _predefinedColors.length]}FF',
+        color: _randomColor(),
         rowId: rowId,
         columnId: columnId,
         // 階層結構資訊
@@ -195,7 +185,8 @@ class LocalMockDataSource implements DataSource {
 
   // 生成隨機顏色 - 從預設的顏色列表中取得
   String _randomColor() {
-    return _predefinedColors[_random.nextInt(_predefinedColors.length)];
+    final colorKeys = _predefinedColors.keys.toList();
+    return colorKeys[_random.nextInt(colorKeys.length)];
   }
 
   @override
@@ -215,7 +206,7 @@ class LocalMockDataSource implements DataSource {
       if (end != null && (event.endTime ?? event.startTime).isAfter(end)) {
         return false;
       }
-      
+
       return true;
     }).toList();
   }

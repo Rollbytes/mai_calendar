@@ -218,7 +218,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
         ),
       ),
       onTap: (CalendarTapDetails details) {
-        if (details.targetElement == CalendarElement.calendarCell && details.date != null) {
+        if (details.targetElement == CalendarElement.calendarCell && details.date != null && _calendarBloc.state.currentView == CalendarView.month) {
           // 點擊日曆單元格時，使用 MaiCalendarDayEvents 顯示當天事件
           MaiCalendarEventsOfDayView.show(
             context: context,
