@@ -116,4 +116,55 @@ class CalendarRepository {
 
     return updateEvent(updatedEvent);
   }
+
+  /// 根據 Board ID 獲取對應的 Base
+  ///
+  /// [boardId] - Board ID
+  Future<Base?> getBaseForBoard(String boardId) async {
+    if (_dataSource is LocalMockDataSource) {
+      final localDataSource = _dataSource as LocalMockDataSource;
+
+      // 先嘗試通過 LocalMockDataSource 獲取 baseId
+      String? baseId = localDataSource.getBaseIdForBoard(boardId);
+
+      // 如果獲取到 baseId，則通過 baseId 獲取 Base 對象
+      if (baseId != null) {
+        return localDataSource.getBase(baseId);
+      }
+
+      // 如果找不到映射關係，則直接嘗試獲取 Base 對象
+      return localDataSource.getBaseForBoard(boardId);
+    }
+
+    // 如果不是 LocalMockDataSource，則實現實際的獲取邏輯
+    // TODO: 需要實現實際的 API 調用邏輯
+    return Future.value(null);
+  }
+
+  /// 獲取所有 Board 到 Base 的映射關係
+  ///
+  /// 返回一個 Map<String, String>，其中 key 是 boardId，value 是 baseId
+  Future<Map<String, String>> getBoardBaseMap() {
+    if (_dataSource is LocalMockDataSource) {
+      final localDataSource = _dataSource as LocalMockDataSource;
+      return Future.value(localDataSource.getBoardBaseMap());
+    }
+
+    // 如果不是 LocalMockDataSource，則實現實際的獲取邏輯
+    return Future.value({});
+  }
+
+  /// 獲取特定 Base
+  ///
+  /// [baseId] - Base ID
+  Future<Base?> getBase(String baseId) async {
+    return _dataSource.getBase(baseId);
+  }
+
+  /// 獲取特定 Board
+  ///
+  /// [boardId] - Board ID
+  Future<Board?> getBoard(String boardId) async {
+    return _dataSource.getBoard(boardId);
+  }
 }

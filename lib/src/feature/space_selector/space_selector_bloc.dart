@@ -90,11 +90,29 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
     ));
 
     try {
+      // 嘗試從 repository 獲取協作版對應的基地
+      final base = await _repository.getBaseForBoard(event.board.id);
+
+      // 如果沒有找到對應的基地，則創建一個默認的基地
+      final defaultBase = base ??
+          Base(
+            id: "default_base",
+            name: "默認基地",
+            description: "自動關聯的基地",
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            ownerId: "system",
+            roles: const [],
+            members: const [],
+            contents: const [],
+          );
+
       // 從 repository 獲取協作版下的表格
       final tables = await _getTables(boardId: event.board.id);
 
       emit(state.copyWith(
         tables: tables,
+        currentBase: defaultBase, // 設置基地
         status: SpaceSelectorStatus.loaded,
       ));
     } catch (e) {
@@ -118,11 +136,11 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
 
       emit(state.copyWith(
         timeColumns: columns,
-                status: SpaceSelectorStatus.loaded,
+        status: SpaceSelectorStatus.loaded,
       ));
     } catch (e) {
-            emit(state.copyWith(
-              status: SpaceSelectorStatus.error,
+      emit(state.copyWith(
+        status: SpaceSelectorStatus.error,
         error: "載入欄位失敗: $e",
       ));
     }
@@ -132,7 +150,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
   Future<void> _onSelectTimeColumn(SelectTimeColumn event, Emitter<SpaceSelectorState> emit) async {
     emit(state.copyWith(
       currentTimeColumn: event.column,
-              status: SpaceSelectorStatus.loaded,
+      status: SpaceSelectorStatus.loaded,
     ));
 
     // 如果所有必要的選擇都已完成，則保存選擇記錄
@@ -160,8 +178,14 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
       final table = await _getTable(event.selection.tableId);
       final column = await _getColumn(event.selection.columnId);
 
+      // 嘗試從 repository 獲取協作版對應的基地
+      Base? baseFromBoard = await _repository.getBaseForBoard(board.id);
+
+      // 使用從 board 獲取的 base 或者原始的 base
+      final finalBase = baseFromBoard ?? base;
+
       emit(state.copyWith(
-        currentBase: base,
+        currentBase: finalBase,
         currentBoard: board,
         currentTable: table,
         currentTimeColumn: column,
@@ -169,7 +193,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
       ));
     } catch (e) {
       emit(state.copyWith(
-              status: SpaceSelectorStatus.error,
+        status: SpaceSelectorStatus.error,
         error: "載入選擇記錄失敗: $e",
       ));
     }
@@ -190,7 +214,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
 
     emit(state.copyWith(
       currentSelection: selection,
-                status: SpaceSelectorStatus.loaded,
+      status: SpaceSelectorStatus.loaded,
     ));
   }
 
@@ -217,7 +241,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
       ));
     } catch (e) {
       emit(state.copyWith(
-              status: SpaceSelectorStatus.error,
+        status: SpaceSelectorStatus.error,
         error: "創建欄位失敗: $e",
       ));
     }
@@ -225,7 +249,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
 
   // 創建表格
   Future<void> _onCreateTable(CreateTable event, Emitter<SpaceSelectorState> emit) async {
-            emit(state.copyWith(status: SpaceSelectorStatus.loading));
+    emit(state.copyWith(status: SpaceSelectorStatus.loading));
 
     try {
       // 使用 CalendarRepository 創建新表格 (未實現，這裡使用模擬數據)
@@ -247,7 +271,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
       emit(state.copyWith(
         tables: tables,
         currentTable: newTable,
-                status: SpaceSelectorStatus.loaded,
+        status: SpaceSelectorStatus.loaded,
       ));
 
       // 自動創建時間欄位
@@ -258,7 +282,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
       ));
     } catch (e) {
       emit(state.copyWith(
-              status: SpaceSelectorStatus.error,
+        status: SpaceSelectorStatus.error,
         error: "創建表格失敗: $e",
       ));
     }
@@ -278,13 +302,13 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
       final board = await _getBoard("board1"); // 假設我們知道 boardId
       final base = await _getBase("base1"); // 假設我們知道 baseId
 
-          emit(state.copyWith(
+      emit(state.copyWith(
         currentBase: base,
         currentBoard: board,
         currentTable: table,
         currentTimeColumn: column,
-            status: SpaceSelectorStatus.loaded,
-          ));
+        status: SpaceSelectorStatus.loaded,
+      ));
     } catch (e) {
       emit(state.copyWith(
         status: SpaceSelectorStatus.error,
@@ -303,7 +327,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
     if (selections.isNotEmpty) {
       emit(state.copyWith(
         recentSelections: selections,
-      status: SpaceSelectorStatus.loaded,
+        status: SpaceSelectorStatus.loaded,
       ));
 
       // 加載第一個選擇
@@ -345,7 +369,7 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
       final bases = await _getBases();
       final boards = await _getAllBoards();
 
-    emit(state.copyWith(
+      emit(state.copyWith(
         bases: bases,
         boards: boards,
         status: SpaceSelectorStatus.loaded,
@@ -362,7 +386,8 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
 
   // 獲取所有基地
   Future<List<Base>> _getBases() async {
-    // 創建模擬數據
+    // 註：這裡應該從 repository 獲取數據，目前使用模擬數據
+    // TODO: 從真實的 API 獲取基地數據
     return [
       Base(
         id: "base1",
@@ -402,23 +427,59 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
 
   // 獲取特定基地
   Future<Base> _getBase(String id) async {
-    final bases = await _getBases();
-    return bases.firstWhere((base) => base.id == id,
-        orElse: () => Base(
-              id: id,
-              name: "基地 $id",
-              description: "",
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              ownerId: "user1",
-              roles: [],
-              members: [],
-              contents: [],
-            ));
+    try {
+      final base = await _repository.getBase(id);
+      if (base != null) {
+        return base;
+      }
+    } catch (e) {
+      // 忽略錯誤，使用默認基地
+    }
+
+    // 如果通過 repository 獲取失敗，則返回默認基地
+    return Base(
+      id: id,
+      name: "默認基地",
+      description: "自動生成的基地",
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      ownerId: "system",
+      roles: const [],
+      members: const [],
+      contents: const [],
+    );
   }
 
   // 獲取所有協作版
   Future<List<Board>> _getAllBoards() async {
+    try {
+      // 從 repository 獲取 board 到 base 映射關係
+      final Map<String, String> boardToBaseMap = await _repository.getBoardBaseMap();
+
+      if (boardToBaseMap.isNotEmpty) {
+        List<Board> allBoards = [];
+
+        // 從 repository 獲取每個 board
+        for (String boardId in boardToBaseMap.keys) {
+          try {
+            final board = await _repository.getBoard(boardId);
+            if (board != null) {
+              allBoards.add(board);
+            }
+          } catch (e) {
+            // 忽略獲取單個 board 時的錯誤
+          }
+        }
+
+        if (allBoards.isNotEmpty) {
+          return allBoards;
+        }
+      }
+    } catch (e) {
+      // 忽略錯誤，使用默認數據
+    }
+
+    // 如果通過 repository 獲取失敗，則返回模擬數據
     final bases = await _getBases();
     List<Board> allBoards = [];
 
@@ -432,7 +493,8 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
 
   // 獲取指定基地下的協作版
   Future<List<Board>> _getBoards({required String baseId}) async {
-    // 創建模擬數據
+    // 註：這裡應該從 repository 獲取數據，目前使用模擬數據
+    // TODO: 從真實的 API 獲取協作版數據
     return [
       Board(
         id: "${baseId}_board1",
@@ -459,18 +521,26 @@ class SpaceSelectorBloc extends Bloc<SpaceSelectorEvent, SpaceSelectorState> {
 
   // 獲取特定協作版
   Future<Board> _getBoard(String id) async {
-    final allBoards = await _getAllBoards();
-    return allBoards.firstWhere((board) => board.id == id,
-        orElse: () => Board(
-              id: id,
-              name: "協作版 $id",
-              description: "",
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              createdBy: "user1",
-              members: [],
-              roles: [],
-            ));
+    try {
+      final board = await _repository.getBoard(id);
+      if (board != null) {
+        return board;
+      }
+    } catch (e) {
+      // 忽略錯誤，使用默認協作版
+    }
+
+    // 如果通過 repository 獲取失敗，則返回默認協作版
+    return Board(
+      id: id,
+      name: "協作版 $id",
+      description: "自動生成的協作版",
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      createdBy: "system",
+      members: [],
+      roles: [],
+    );
   }
 
   // 獲取指定協作版下的表格

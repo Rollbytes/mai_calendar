@@ -61,8 +61,22 @@ class _SpaceSelectorState extends State<SpaceSelector> {
         });
 
         // 如果所有選擇都完成，調用回調函數
-        if (_selectedBase != null && _selectedBoard != null && _selectedTable != null && _selectedTimeColumn != null && widget.onSelectionComplete != null) {
-          widget.onSelectionComplete!(_selectedBase!, _selectedBoard!, _selectedTable!, _selectedTimeColumn!);
+        if (_selectedBoard != null && _selectedTable != null && _selectedTimeColumn != null && widget.onSelectionComplete != null) {
+          // 確保有一個有效的 Base
+          final base = _selectedBase ??
+              Base(
+                id: "default_base",
+                name: "默認基地",
+                description: "自動關聯的基地",
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+                ownerId: "system",
+                roles: const [],
+                members: const [],
+                contents: const [],
+              );
+
+          widget.onSelectionComplete!(base, _selectedBoard!, _selectedTable!, _selectedTimeColumn!);
         }
       },
       child: BlocBuilder<SpaceSelectorBloc, SpaceSelectorState>(
@@ -98,14 +112,6 @@ class _SpaceSelectorState extends State<SpaceSelector> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 基地選擇
-              _PathItem(
-                icon: Icons.home_outlined,
-                text: _selectedBase?.name ?? "選擇基地",
-                isDisabled: isDisabled,
-              ),
-              _buildSeparator(),
-
               // 協作版選擇
               _PathItem(
                 icon: Icons.dashboard_outlined,

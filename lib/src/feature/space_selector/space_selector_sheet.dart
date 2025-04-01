@@ -57,14 +57,23 @@ class _SpaceSelectorSheetState extends State<SpaceSelectorSheet> with SingleTick
       listener: (context, state) {
         // 不再自動調用 Navigator.of(context).pop() 關閉表單
         // 只在所有選擇完成時通知狀態更新
-        if (state.currentBase != null &&
-            state.currentBoard != null &&
-            state.currentTable != null &&
-            state.currentTimeColumn != null &&
-            state.status == SpaceSelectorStatus.loaded) {
-          // 只調用回調，不自動關閉表單
+        if (state.currentBoard != null && state.currentTable != null && state.currentTimeColumn != null && state.status == SpaceSelectorStatus.loaded) {
+          // 只調用回調，確保有一個 Base（即使是默認的）
+          final base = state.currentBase ??
+              Base(
+                id: "default_base",
+                name: "默認基地",
+                description: "自動關聯的基地",
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+                ownerId: "system",
+                roles: const [],
+                members: const [],
+                contents: const [],
+              );
+
           widget.onSave(
-            state.currentBase!,
+            base,
             state.currentBoard!,
             state.currentTable!,
             state.currentTimeColumn!,
@@ -273,13 +282,9 @@ class _SpaceSelectorSheetState extends State<SpaceSelectorSheet> with SingleTick
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 基地選擇下拉菜單
-              _buildBaseDropdown(state),
+              // 直接顯示協作版選擇下拉菜單
+              _buildBoardDropdown(state),
               const SizedBox(height: 16),
-
-              // 協作版選擇下拉菜單 (如果有基地)
-              if (state.currentBase != null) _buildBoardDropdown(state),
-              if (state.currentBase != null) const SizedBox(height: 16),
 
               // 表格選擇下拉菜單 (如果有協作版)
               if (state.currentBoard != null) _buildTableDropdown(state),
@@ -295,44 +300,50 @@ class _SpaceSelectorSheetState extends State<SpaceSelectorSheet> with SingleTick
     );
   }
 
-  /// 構建基地下拉選擇
-  Widget _buildBaseDropdown(SpaceSelectorState state) {
-    return DropdownButtonFormField<Base>(
-      decoration: const InputDecoration(
-        labelText: '選擇基地',
-        border: OutlineInputBorder(),
-      ),
-      value: state.currentBase,
-      items: state.bases.map((base) {
-        return DropdownMenuItem<Base>(
-          value: base,
-          child: Text(base.name),
-        );
-      }).toList(),
-      onChanged: (base) {
-        if (base != null) {
-          _spaceSelectorBloc.add(SelectBase(base));
-        }
-      },
-    );
-  }
-
   /// 構建協作版下拉選擇
   Widget _buildBoardDropdown(SpaceSelectorState state) {
-    return DropdownButtonFormField<Board>(
+    // 確保 currentBoard 在 boards 列表中
+    final Board? selectedBoard = state.currentBoard;
+    String? selectedBoardId;
+
+    if (selectedBoard != null && state.boards.isNotEmpty) {
+      // 檢查當前選擇的 board 是否在列表中
+      final boardInList = state.boards.any((board) => board.id == selectedBoard.id);
+      if (boardInList) {
+        selectedBoardId = selectedBoard.id;
+      }
+    }
+
+    return DropdownButtonFormField<String>(
       decoration: const InputDecoration(
         labelText: '選擇協作版',
         border: OutlineInputBorder(),
       ),
-      value: state.currentBoard,
+      value: selectedBoardId,
       items: state.boards.map((board) {
-        return DropdownMenuItem<Board>(
-          value: board,
+        return DropdownMenuItem<String>(
+          value: board.id,
           child: Text(board.name),
         );
       }).toList(),
-      onChanged: (board) {
-        if (board != null) {
+      onChanged: (boardId) {
+        if (boardId != null) {
+          // 查找選擇的 board
+          final board = state.boards.firstWhere(
+            (b) => b.id == boardId,
+            orElse: () => state.boards.isNotEmpty
+                ? state.boards.first
+                : Board(
+                    id: "default_board",
+                    name: "默認協作版",
+                    description: "",
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                    createdBy: "system",
+                    members: [],
+                    roles: [],
+                  ),
+          );
           _spaceSelectorBloc.add(SelectBoard(board));
         }
       },
@@ -341,20 +352,49 @@ class _SpaceSelectorSheetState extends State<SpaceSelectorSheet> with SingleTick
 
   /// 構建表格下拉選擇
   Widget _buildTableDropdown(SpaceSelectorState state) {
-    return DropdownButtonFormField<MaiTable>(
+    // 確保 currentTable 在 tables 列表中
+    final MaiTable? selectedTable = state.currentTable;
+    String? selectedTableId;
+
+    if (selectedTable != null && state.tables.isNotEmpty) {
+      // 檢查當前選擇的 table 是否在列表中
+      final tableInList = state.tables.any((table) => table.id == selectedTable.id);
+      if (tableInList) {
+        selectedTableId = selectedTable.id;
+      }
+    }
+
+    return DropdownButtonFormField<String>(
       decoration: const InputDecoration(
         labelText: '選擇表格',
         border: OutlineInputBorder(),
       ),
-      value: state.currentTable,
+      value: selectedTableId,
       items: state.tables.map((table) {
-        return DropdownMenuItem<MaiTable>(
-          value: table,
+        return DropdownMenuItem<String>(
+          value: table.id,
           child: Text(table.name),
         );
       }).toList(),
-      onChanged: (table) {
-        if (table != null) {
+      onChanged: (tableId) {
+        if (tableId != null) {
+          // 查找選擇的 table
+          final table = state.tables.firstWhere(
+            (t) => t.id == tableId,
+            orElse: () => state.tables.isNotEmpty
+                ? state.tables.first
+                : MaiTable(
+                    id: "default_table",
+                    name: "默認表格",
+                    description: "",
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                    columns: [],
+                    rows: [],
+                    layouts: [],
+                    permissions: {},
+                  ),
+          );
           _spaceSelectorBloc.add(SelectTable(table));
         }
       },
@@ -363,20 +403,44 @@ class _SpaceSelectorSheetState extends State<SpaceSelectorSheet> with SingleTick
 
   /// 構建欄位下拉選擇
   Widget _buildColumnDropdown(SpaceSelectorState state) {
-    return DropdownButtonFormField<MaiColumn>(
+    // 確保 currentTimeColumn 在 timeColumns 列表中
+    final MaiColumn? selectedColumn = state.currentTimeColumn;
+    String? selectedColumnId;
+
+    if (selectedColumn != null && state.timeColumns.isNotEmpty) {
+      // 檢查當前選擇的 column 是否在列表中
+      final columnInList = state.timeColumns.any((column) => column.id == selectedColumn.id);
+      if (columnInList) {
+        selectedColumnId = selectedColumn.id;
+      }
+    }
+
+    return DropdownButtonFormField<String>(
       decoration: const InputDecoration(
         labelText: '選擇欄位',
         border: OutlineInputBorder(),
       ),
-      value: state.currentTimeColumn,
+      value: selectedColumnId,
       items: state.timeColumns.map((column) {
-        return DropdownMenuItem<MaiColumn>(
-          value: column,
+        return DropdownMenuItem<String>(
+          value: column.id,
           child: Text(column.name),
         );
       }).toList(),
-      onChanged: (column) {
-        if (column != null) {
+      onChanged: (columnId) {
+        if (columnId != null) {
+          // 查找選擇的 column
+          final column = state.timeColumns.firstWhere(
+            (c) => c.id == columnId,
+            orElse: () => state.timeColumns.isNotEmpty
+                ? state.timeColumns.first
+                : MaiColumn(
+                    id: "default_column",
+                    name: "默認欄位",
+                    type: ColumnType.datetime,
+                    options: {},
+                  ),
+          );
           _spaceSelectorBloc.add(SelectTimeColumn(column));
         }
       },
@@ -385,6 +449,6 @@ class _SpaceSelectorSheetState extends State<SpaceSelectorSheet> with SingleTick
 
   /// 檢查是否所有選擇都已完成
   bool _isAllSelectionComplete(SpaceSelectorState state) {
-    return state.currentBase != null && state.currentBoard != null && state.currentTable != null && state.currentTimeColumn != null;
+    return state.currentBoard != null && state.currentTable != null && state.currentTimeColumn != null;
   }
 }

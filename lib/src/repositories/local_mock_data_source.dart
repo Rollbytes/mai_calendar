@@ -13,6 +13,7 @@ class LocalMockDataSource implements DataSource {
   final Map<String, MaiTable> _tables = {};
   final Map<String, MaiColumn> _columns = {};
   final Map<String, MaiRow> _rows = {};
+  final Map<String, String> _boardToBaseMap = {};
 
   final Random _random = Random();
 
@@ -31,34 +32,131 @@ class LocalMockDataSource implements DataSource {
     final now = DateTime.now();
     final userId = 'user_001';
 
-    // 創建一個模擬的Base
-    final baseId = 'base_001';
-    final base = Base(
-      id: baseId,
-      name: '業務部專案',
-      description: '業務部的所有協作專案',
-      createdAt: now.subtract(const Duration(days: 30)),
-      updatedAt: now,
-      ownerId: userId,
-      roles: [],
-      members: [],
-      contents: [],
-    );
-    _bases[baseId] = base;
+    // 創建幾個模擬的 Base
+    final bases = [
+      Base(
+        id: 'base_001',
+        name: '業務部專案',
+        description: '業務部的所有協作專案',
+        createdAt: now.subtract(const Duration(days: 30)),
+        updatedAt: now,
+        ownerId: userId,
+        roles: [],
+        members: [],
+        contents: [],
+      ),
+      Base(
+        id: 'base_002',
+        name: '產品部專案',
+        description: '產品部的所有協作專案',
+        createdAt: now.subtract(const Duration(days: 25)),
+        updatedAt: now,
+        ownerId: userId,
+        roles: [],
+        members: [],
+        contents: [],
+      ),
+      Base(
+        id: 'base_003',
+        name: '研發部專案',
+        description: '研發部的所有協作專案',
+        createdAt: now.subtract(const Duration(days: 20)),
+        updatedAt: now,
+        ownerId: userId,
+        roles: [],
+        members: [],
+        contents: [],
+      ),
+    ];
 
-    // 創建一個模擬的Board
-    final boardId = 'board_001';
-    final board = Board(
-      id: boardId,
-      name: '業務會議',
-      description: '業務部定期會議和排程',
-      createdAt: now.subtract(const Duration(days: 20)),
-      updatedAt: now,
-      createdBy: userId,
-      members: [],
-      roles: [],
-    );
-    _boards[boardId] = board;
+    for (var base in bases) {
+      _bases[base.id] = base;
+    }
+
+    // 創建多個模擬的 Board，每個 Board 關聯到特定的 Base
+    final boards = [
+      // 業務部 Boards
+      Board(
+        id: 'board_001',
+        name: '業務會議',
+        description: '業務部定期會議和排程',
+        createdAt: now.subtract(const Duration(days: 20)),
+        updatedAt: now,
+        createdBy: userId,
+        members: [],
+        roles: [],
+      ),
+      Board(
+        id: 'board_002',
+        name: '客戶管理',
+        description: '客戶資訊與合約管理',
+        createdAt: now.subtract(const Duration(days: 18)),
+        updatedAt: now,
+        createdBy: userId,
+        members: [],
+        roles: [],
+      ),
+      // 產品部 Boards
+      Board(
+        id: 'board_003',
+        name: '產品規劃',
+        description: '產品路線圖與規劃',
+        createdAt: now.subtract(const Duration(days: 15)),
+        updatedAt: now,
+        createdBy: userId,
+        members: [],
+        roles: [],
+      ),
+      Board(
+        id: 'board_004',
+        name: '需求追蹤',
+        description: '用戶需求收集與追蹤',
+        createdAt: now.subtract(const Duration(days: 12)),
+        updatedAt: now,
+        createdBy: userId,
+        members: [],
+        roles: [],
+      ),
+      // 研發部 Boards
+      Board(
+        id: 'board_005',
+        name: '專案進度',
+        description: '研發專案進度追蹤',
+        createdAt: now.subtract(const Duration(days: 10)),
+        updatedAt: now,
+        createdBy: userId,
+        members: [],
+        roles: [],
+      ),
+      Board(
+        id: 'board_006',
+        name: '問題追蹤',
+        description: 'Bug 與問題追蹤',
+        createdAt: now.subtract(const Duration(days: 8)),
+        updatedAt: now,
+        createdBy: userId,
+        members: [],
+        roles: [],
+      ),
+    ];
+
+    // 建立 Board 和 Base 的對應關係
+    final boardBaseMapping = {
+      'board_001': 'base_001', // 業務會議 -> 業務部專案
+      'board_002': 'base_001', // 客戶管理 -> 業務部專案
+      'board_003': 'base_002', // 產品規劃 -> 產品部專案
+      'board_004': 'base_002', // 需求追蹤 -> 產品部專案
+      'board_005': 'base_003', // 專案進度 -> 研發部專案
+      'board_006': 'base_003', // 問題追蹤 -> 研發部專案
+    };
+
+    for (var board in boards) {
+      _boards[board.id] = board;
+      // 添加到 boardToBaseMap
+      if (boardBaseMapping.containsKey(board.id)) {
+        _boardToBaseMap[board.id] = boardBaseMapping[board.id]!;
+      }
+    }
 
     // 創建一個模擬的MaiTable
     final tableId = 'table_001';
@@ -152,6 +250,12 @@ class LocalMockDataSource implements DataSource {
         minutes: durationMinutes,
       ));
 
+      // 選擇隨機的 board 和對應的 base
+      final boardId = 'board_00${(i % 6) + 1}';
+      final baseId = _boardToBaseMap[boardId] ?? 'base_001'; // 使用對應的 base，若沒有則使用默認值
+      final board = _boards[boardId];
+      final base = _bases[baseId];
+
       // 創建行事曆事件
       final event = CalendarEvent(
         id: eventId,
@@ -164,9 +268,9 @@ class LocalMockDataSource implements DataSource {
         columnId: columnId,
         // 階層結構資訊
         baseId: baseId,
-        baseName: base.name,
+        baseName: base?.name,
         boardId: boardId,
-        boardName: board.name,
+        boardName: board?.name,
         tableId: tableId,
         tableName: table.name,
         columnName: column?.name,
@@ -313,5 +417,21 @@ class LocalMockDataSource implements DataSource {
   Future<MaiRow?> getRow(String rowId) async {
     await Future.delayed(const Duration(milliseconds: 50));
     return _rows[rowId];
+  }
+
+  /// 獲取 board 到 base 的映射關係
+  Map<String, String> getBoardBaseMap() {
+    return Map.from(_boardToBaseMap);
+  }
+
+  /// 根據 boardId 獲取對應的 baseId
+  String? getBaseIdForBoard(String boardId) {
+    return _boardToBaseMap[boardId];
+  }
+
+  /// 根據 boardId 獲取對應的 Base
+  Base? getBaseForBoard(String boardId) {
+    final baseId = _boardToBaseMap[boardId];
+    return baseId != null ? _bases[baseId] : null;
   }
 }
