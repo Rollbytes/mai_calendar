@@ -11,6 +11,13 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
 
   final CalendarController calendarController = CalendarController();
 
+  final List<CalendarView> allowedViews = [
+    CalendarView.schedule,
+    CalendarView.day,
+    CalendarView.week,
+    CalendarView.month,
+  ];
+
   CalendarBloc({required CalendarRepository repository})
       : _repository = repository,
         super(CalendarState.initial()) {
@@ -22,6 +29,8 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
     on<DeleteCalendarEvent>(_onDeleteCalendarEvent);
     on<ChangeCalendarView>(_onChangeCalendarView);
     on<CreateSimpleCalendarEvent>(_onCreateSimpleCalendarEvent);
+    on<ToggleLunarDate>(_onToggleLunarDate);
+    on<UpdateAppointmentDisplayCount>(_onUpdateAppointmentDisplayCount);
   }
 
   /// 處理加載多個事件的事件
@@ -182,6 +191,38 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
       ));
     } catch (e) {
       emit(state.withError('創建事件失敗', e));
+    }
+  }
+
+  /// 切換農曆顯示
+  Future<void> _onToggleLunarDate(ToggleLunarDate event, Emitter<CalendarState> emit) async {
+    emit(state.copyWith(showLunarDate: event.showLunarDate));
+  }
+
+  /// 更新行程顯示數量
+  Future<void> _onUpdateAppointmentDisplayCount(UpdateAppointmentDisplayCount event, Emitter<CalendarState> emit) async {
+    emit(state.copyWith(appointmentDisplayCount: event.count));
+  }
+
+  /// 獲取視圖名稱
+  String getViewNameZhTW(CalendarView view) {
+    switch (view) {
+      case CalendarView.day:
+        return '日';
+      case CalendarView.week:
+        return '週';
+      case CalendarView.month:
+        return '月';
+      case CalendarView.schedule:
+        return '行程';
+      case CalendarView.timelineDay:
+        return '時間軸日';
+      case CalendarView.timelineWeek:
+        return '時間軸週';
+      case CalendarView.timelineMonth:
+        return '時間軸月';
+      default:
+        return '';
     }
   }
 }

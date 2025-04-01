@@ -36,6 +36,10 @@ class CalendarState extends Equatable {
   final String? lastDeletedEventId;
   final List<String>? lastDeletedEventIds;
 
+  // 視圖設置
+  final bool showLunarDate;
+  final int appointmentDisplayCount;
+
   /// 創建日曆狀態
   const CalendarState({
     this.status = CalendarStatus.initial,
@@ -51,6 +55,8 @@ class CalendarState extends Equatable {
     this.lastUpdatedEventId,
     this.lastDeletedEventId,
     this.lastDeletedEventIds,
+    this.showLunarDate = false,
+    this.appointmentDisplayCount = 3,
   });
 
   /// 初始狀態
@@ -58,6 +64,8 @@ class CalendarState extends Equatable {
         status: CalendarStatus.initial,
         currentView: CalendarView.month,
         events: [],
+        showLunarDate: false,
+        appointmentDisplayCount: 3,
       );
 
   /// 加載中
@@ -149,6 +157,8 @@ class CalendarState extends Equatable {
     String? lastUpdatedEventId,
     String? lastDeletedEventId,
     List<String>? lastDeletedEventIds,
+    bool? showLunarDate,
+    int? appointmentDisplayCount,
   }) {
     return CalendarState(
       status: status ?? this.status,
@@ -164,6 +174,8 @@ class CalendarState extends Equatable {
       lastUpdatedEventId: lastUpdatedEventId ?? this.lastUpdatedEventId,
       lastDeletedEventId: lastDeletedEventId ?? this.lastDeletedEventId,
       lastDeletedEventIds: lastDeletedEventIds ?? this.lastDeletedEventIds,
+      showLunarDate: showLunarDate ?? this.showLunarDate,
+      appointmentDisplayCount: appointmentDisplayCount ?? this.appointmentDisplayCount,
     );
   }
 
@@ -182,5 +194,7 @@ class CalendarState extends Equatable {
         lastUpdatedEventId,
         lastDeletedEventId,
         lastDeletedEventIds,
+        showLunarDate,
+        appointmentDisplayCount,
       ];
 }

@@ -43,12 +43,14 @@ class DeleteCalendarEvent extends CalendarBlocEvent {
   const DeleteCalendarEvent(this.eventId);
 }
 
+/// 切換行事曆視圖
 class ChangeCalendarView extends CalendarBlocEvent {
   final CalendarView view;
 
   const ChangeCalendarView(this.view);
 }
 
+/// 創建簡單行事曆事件
 class CreateSimpleCalendarEvent extends CalendarBlocEvent {
   final String title;
   final DateTime startTime;
@@ -63,4 +65,18 @@ class CreateSimpleCalendarEvent extends CalendarBlocEvent {
     this.isAllDay = false,
     this.color = '#000000',
   });
+}
+
+/// 切換農曆顯示
+class ToggleLunarDate extends CalendarBlocEvent {
+  final bool showLunarDate;
+
+  const ToggleLunarDate(this.showLunarDate);
+}
+
+/// 更新行程顯示數量
+class UpdateAppointmentDisplayCount extends CalendarBlocEvent {
+  final int count;
+
+  const UpdateAppointmentDisplayCount(this.count);
 }

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:lunar/calendar/Lunar.dart';
 import '../repositories/mai_calendar_data_source.dart';
 import '../calendar_bloc/calendar_bloc.dart';
-import '../calendar_bloc/calendar_event.dart';
+import '../calendar_bloc/calendar_event.dart' as bloc_event;
 import '../calendar_bloc/calendar_state.dart';
 import 'mai_calendar_editor.dart';
 import 'mai_calendar_events_of_day_view.dart';
@@ -20,12 +21,20 @@ class MaiCalendarWidget extends StatefulWidget {
   /// 是否允許視圖切換
   final bool allowViewNavigation;
 
+  /// 是否顯示農曆
+  final bool showLunarDate;
+
+  /// 每個單元格最多顯示的事件數量
+  final int appointmentDisplayCount;
+
   final CalendarBloc calendarBloc;
   const MaiCalendarWidget({
     super.key,
     this.initialView = CalendarView.month,
     this.initialDisplayDate,
     this.allowViewNavigation = false,
+    this.showLunarDate = false,
+    this.appointmentDisplayCount = 3,
     required this.calendarBloc,
   });
 
@@ -38,9 +47,17 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
   late CalendarBloc _calendarBloc;
   DateTime _currentViewDate = DateTime.now();
   CalendarView _currentView = CalendarView.month;
+  final DateTime _now = DateTime.now();
+  bool _showLunarDate = false;
+  int _appointmentDisplayCount = 3;
+
   @override
   void initState() {
     super.initState();
+    // 初始化農曆日期顯示
+    _showLunarDate = widget.showLunarDate;
+    _appointmentDisplayCount = widget.appointmentDisplayCount;
+
     _calendarBloc = widget.calendarBloc;
     _calendarController = _calendarBloc.calendarController;
     _currentView = widget.initialView;
@@ -48,6 +65,21 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
 
     // 初始加載事件
     _loadEventsForCurrentView();
+  }
+
+  @override
+  void didUpdateWidget(MaiCalendarWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.showLunarDate != widget.showLunarDate) {
+      setState(() {
+        _showLunarDate = widget.showLunarDate;
+      });
+    }
+    if (oldWidget.appointmentDisplayCount != widget.appointmentDisplayCount) {
+      setState(() {
+        _appointmentDisplayCount = widget.appointmentDisplayCount;
+      });
+    }
   }
 
   @override
@@ -62,9 +94,45 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     final viewEndDate = _getViewEndDate();
 
     _calendarBloc.add(
-      LoadCalendarEvents(
+      bloc_event.LoadCalendarEvents(
         start: viewStartDate,
         end: viewEndDate,
+      ),
+    );
+  }
+
+  /// 自定義月曆單元格構建器
+  Widget _buildMonthCell(BuildContext context, MonthCellDetails details) {
+    final lunarDate = Lunar.fromDate(details.date);
+    final lunarDay = lunarDate.getDay();
+    final lunarMonth = lunarDate.getMonth();
+
+    final bool isToday = details.date.day == _now.day && details.date.month == _now.month && details.date.year == _now.year;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(width: 0.5, color: Colors.grey.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Text(
+              '${details.date.day}',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                color: isToday ? Theme.of(context).colorScheme.primary : null,
+              ),
+            ),
+          ),
+          if (_showLunarDate)
+            Text(
+              "$lunarMonth/$lunarDay",
+              style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+        ],
       ),
     );
   }
@@ -144,6 +212,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<CalendarBloc, CalendarState>(
+      bloc: _calendarBloc,
       listener: (context, state) {
         // 可以在這裡處理一些通知或彈窗
         if (state.isError) {
@@ -193,10 +262,11 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
         dayTextStyle: TextStyle(fontWeight: FontWeight.w500),
         dateTextStyle: TextStyle(fontWeight: FontWeight.bold),
       ),
-      monthViewSettings: const MonthViewSettings(
+      monthViewSettings: MonthViewSettings(
         appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
         showAgenda: false,
-        agendaStyle: AgendaStyle(
+        appointmentDisplayCount: _appointmentDisplayCount,
+        agendaStyle: const AgendaStyle(
           backgroundColor: Colors.white,
           appointmentTextStyle: TextStyle(
             fontSize: 14,
@@ -211,6 +281,7 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
           fontSize: 14,
         ),
       ),
+      monthCellBuilder: _buildMonthCell,
       onTap: (CalendarTapDetails details) {
         if (details.targetElement == CalendarElement.calendarCell && details.date != null && _calendarBloc.state.currentView == CalendarView.month) {
           // 點擊日曆單元格時，使用 MaiCalendarDayEvents 顯示當天事件
