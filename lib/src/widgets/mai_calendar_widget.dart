@@ -5,7 +5,6 @@ import '../repositories/mai_calendar_data_source.dart';
 import '../calendar_bloc/calendar_bloc.dart';
 import '../calendar_bloc/calendar_event.dart';
 import '../calendar_bloc/calendar_state.dart';
-import '../models/index.dart';
 import 'mai_calendar_editor.dart';
 import 'mai_calendar_events_of_day_view.dart';
 
@@ -221,21 +220,15 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       onTap: (CalendarTapDetails details) {
         if (details.targetElement == CalendarElement.calendarCell && details.date != null) {
           // 點擊日曆單元格時，使用 MaiCalendarDayEvents 顯示當天事件
-          showModalBottomSheet(
+          MaiCalendarEventsOfDayView.show(
             context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) {
-              return MaiCalendarEventsOfDayView(
-                selectedDate: details.date!,
-                calendarBloc: _calendarBloc,
-                floatingActionButton: FloatingActionButton(
-                  onPressed: () => MaiCalendarEditor.show(context: context, currentDate: details.date!, calendarBloc: _calendarBloc),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  child: const Icon(Icons.add, color: Colors.white),
-                ),
-              );
-            },
+            selectedDate: details.date!,
+            calendarBloc: _calendarBloc,
+            floatingActionButton: FloatingActionButton(
+              onPressed: () => MaiCalendarEditor.show(context: context, currentDate: details.date!, calendarBloc: _calendarBloc),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
           );
         }
       },

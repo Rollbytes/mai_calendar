@@ -8,7 +8,51 @@ import 'mai_calendar_editor.dart';
 
 /// 行事曆日期事件列表
 /// 用於顯示某一天的所有行程
-class MaiCalendarEventsOfDayView extends StatefulWidget {
+class MaiCalendarEventsOfDayView {
+  /// 顯示行事曆日期事件列表
+  static Future<void> show({
+    required BuildContext context,
+    required DateTime selectedDate,
+    required CalendarBloc calendarBloc,
+    Widget? floatingActionButton,
+  }) {
+    return Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black54,
+        pageBuilder: (_, __, ___) {
+          return Material(
+            type: MaterialType.transparency,
+            child: SafeArea(
+              bottom: false,
+              child: _MaiCalendarEventsOfDayViewContent(
+                selectedDate: selectedDate,
+                calendarBloc: calendarBloc,
+                floatingActionButton: floatingActionButton,
+              ),
+            ),
+          );
+        },
+        transitionsBuilder: (_, animation, __, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 1), // 從底部滑入
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 行事曆日期事件列表內容組件
+class _MaiCalendarEventsOfDayViewContent extends StatefulWidget {
   /// 選中的日期
   final DateTime selectedDate;
 
@@ -18,28 +62,19 @@ class MaiCalendarEventsOfDayView extends StatefulWidget {
   /// 創建按鈕
   final Widget? floatingActionButton;
 
-  const MaiCalendarEventsOfDayView({
-    super.key,
+  const _MaiCalendarEventsOfDayViewContent({
     required this.selectedDate,
     required this.calendarBloc,
     this.floatingActionButton,
   });
 
   @override
-  State<MaiCalendarEventsOfDayView> createState() => _MaiCalendarEventsOfDayViewState();
+  State<_MaiCalendarEventsOfDayViewContent> createState() => _MaiCalendarEventsOfDayViewContentState();
 }
 
-class _MaiCalendarEventsOfDayViewState extends State<MaiCalendarEventsOfDayView> {
+class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOfDayViewContent> {
   final DraggableScrollableController _sheetController = DraggableScrollableController();
   final ScrollController _scrollController = ScrollController();
-  late CalendarBloc _calendarBloc;
-  bool _isScrollAnimating = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _calendarBloc = widget.calendarBloc;
-  }
 
   @override
   void dispose() {
@@ -50,90 +85,135 @@ class _MaiCalendarEventsOfDayViewState extends State<MaiCalendarEventsOfDayView>
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Stack(
-        children: [
-          _buildDraggableSheet(context),
-          if (widget.floatingActionButton != null)
-            Positioned(
-              bottom: 100,
-              right: 20,
-              child: widget.floatingActionButton!,
-            ),
-        ],
-      ),
+    return Stack(
+      children: [
+        _buildDraggableSheet(context),
+        if (widget.floatingActionButton != null)
+          Positioned(
+            bottom: 100,
+            right: 20,
+            child: widget.floatingActionButton!,
+          ),
+      ],
     );
   }
 
   Widget _buildDraggableSheet(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.45,
-      minChildSize: 0.45,
-      maxChildSize: 0.95,
-      snap: true,
-      snapSizes: const [0.45, 0.95],
-      controller: _sheetController,
-      builder: (context, scrollController) {
-        return NotificationListener<ScrollNotification>(
-          onNotification: _handleScrollNotification,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.grey, spreadRadius: 2, blurRadius: 4)],
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: Column(
-              children: [
-                _buildDragIndicator(),
-                _buildDateHeader(),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: _buildEventList(scrollController),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+    final screenHeight = MediaQuery.of(context).size.height;
 
-  bool _handleScrollNotification(ScrollNotification notification) {
-    if (notification is ScrollUpdateNotification && !_isScrollAnimating) {
-      if (notification.metrics.pixels < 0 && notification.dragDetails != null) {
-        if (_sheetController.isAttached) {
-          final currentSize = _sheetController.size;
-          if (currentSize >= 0.8) {
-            _isScrollAnimating = true;
-            _sheetController
-                .animateTo(
-              0.45,
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.easeOut,
-            )
-                .whenComplete(() {
-              _isScrollAnimating = false;
-            });
-          } else if (currentSize <= 0.5) {
-            Navigator.of(context).pop();
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // 當列表達到頂部且繼續向下滑動時，控制整個表單高度
+        if (notification is ScrollUpdateNotification && notification.metrics.pixels <= 0 && notification.dragDetails != null) {
+          if (_sheetController.isAttached) {
+            double delta = notification.dragDetails!.delta.dy;
+            double newSize = _sheetController.size - (delta / screenHeight);
+            if (newSize >= 0.45 && newSize <= 0.95) {
+              _sheetController.animateTo(
+                newSize,
+                duration: const Duration(milliseconds: 1),
+                curve: Curves.linear,
+              );
+              return true; // 攔截滾動事件
+            }
           }
         }
-      }
-    }
-    return true;
+        return false; // 不攔截其他滾動事件
+      },
+      child: GestureDetector(
+        // 使用更敏感的拖動檢測
+        onVerticalDragUpdate: (details) {
+          if (_sheetController.isAttached) {
+            // 計算新的尺寸，更平滑的響應
+            double delta = details.delta.dy;
+            double newSize = _sheetController.size - (delta / screenHeight);
+            // 限制在允許範圍內
+            newSize = newSize.clamp(0.45, 0.95);
+
+            // 使用animateTo而不是jumpTo，但設置非常短的動畫時間
+            _sheetController.animateTo(
+              newSize,
+              duration: const Duration(milliseconds: 1),
+              curve: Curves.linear,
+            );
+          }
+        },
+        // 添加拖動結束處理，實現慣性效果
+        onVerticalDragEnd: (details) {
+          if (_sheetController.isAttached) {
+            // 獲取當前尺寸
+            final currentSize = _sheetController.size;
+            // 計算目標尺寸（根據速度和當前位置決定滑動到哪個snap點）
+            final double velocity = details.primaryVelocity ?? 0;
+
+            double targetSize;
+            if (velocity > 500) {
+              // 快速向下滑動
+              targetSize = 0.45;
+            } else if (velocity < -500) {
+              // 快速向上滑動
+              targetSize = 0.95;
+            } else {
+              // 緩慢滑動，根據當前位置決定
+              targetSize = currentSize > 0.7 ? 0.95 : 0.45;
+            }
+
+            // 如果目標尺寸是最小值且用戶正在快速向下滑動，關閉視圖
+            if (targetSize == 0.45 && velocity > 800) {
+              Navigator.of(context).pop();
+              return;
+            }
+
+            // 平滑過渡到目標尺寸
+            _sheetController.animateTo(
+              targetSize,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        },
+        child: DraggableScrollableSheet(
+          controller: _sheetController,
+          initialChildSize: 0.45,
+          minChildSize: 0.45,
+          maxChildSize: 0.95,
+          snap: true,
+          snapAnimationDuration: const Duration(milliseconds: 300),
+          snapSizes: const [0.45, 0.95],
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [BoxShadow(color: Colors.grey, spreadRadius: 2, blurRadius: 4)],
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  _buildDragIndicator(),
+                  _buildDateHeader(),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: _buildEventList(scrollController),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   Widget _buildDragIndicator() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.grey,
-          borderRadius: BorderRadius.all(Radius.circular(12)),
+        height: 6,
+        width: 40,
+        decoration: const ShapeDecoration(
+          color: Colors.black12,
+          shape: StadiumBorder(),
         ),
-        width: 36,
-        height: 4,
       ),
     );
   }
@@ -163,7 +243,7 @@ class _MaiCalendarEventsOfDayViewState extends State<MaiCalendarEventsOfDayView>
 
   Widget _buildEventList(ScrollController scrollController) {
     return BlocBuilder<CalendarBloc, CalendarState>(
-      bloc: _calendarBloc,
+      bloc: widget.calendarBloc,
       builder: (context, state) {
         if (state.isLoading) {
           return const Center(child: CircularProgressIndicator());
@@ -322,7 +402,7 @@ class _MaiCalendarEventsOfDayViewState extends State<MaiCalendarEventsOfDayView>
       currentDate: widget.selectedDate,
       mode: MaiCalendarBottomSheetMode.edit,
       eventData: event,
-      calendarBloc: _calendarBloc,
+      calendarBloc: widget.calendarBloc,
     );
   }
 }
