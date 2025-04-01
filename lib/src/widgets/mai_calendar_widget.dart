@@ -28,6 +28,9 @@ class MaiCalendarWidget extends StatefulWidget {
   /// 每個單元格最多顯示的事件數量
   final int appointmentDisplayCount;
 
+  /// 視圖變化回調
+  final Function(ViewChangedDetails)? onViewChanged;
+
   final CalendarBloc calendarBloc;
   const MaiCalendarWidget({
     super.key,
@@ -36,6 +39,7 @@ class MaiCalendarWidget extends StatefulWidget {
     this.allowViewNavigation = false,
     this.showLunarDate = false,
     this.appointmentDisplayCount = 3,
+    this.onViewChanged,
     required this.calendarBloc,
   });
 
@@ -79,6 +83,13 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     if (oldWidget.appointmentDisplayCount != widget.appointmentDisplayCount) {
       setState(() {
         _appointmentDisplayCount = widget.appointmentDisplayCount;
+      });
+    }
+    // 添加對初始視圖變化的檢測
+    if (oldWidget.initialView != widget.initialView) {
+      setState(() {
+        _currentView = widget.initialView;
+        _calendarController.view = widget.initialView;
       });
     }
   }
@@ -222,11 +233,25 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     return BlocConsumer<CalendarBloc, CalendarState>(
       bloc: _calendarBloc,
       listener: (context, state) {
-        // 可以在這裡處理一些通知或彈窗
+        // 處理錯誤通知
         if (state.isError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.errorMessage ?? '操作失敗')),
           );
+        }
+
+        // 處理視圖變化
+        if (_currentView != state.currentView) {
+          setState(() {
+            _currentView = state.currentView;
+            // 確保控制器的視圖與狀態保持同步
+            if (_calendarController.view != state.currentView) {
+              _calendarController.view = state.currentView;
+            }
+          });
+          debugPrint("日曆視圖已切換為: ${state.currentView}");
+          // 視圖變化後重新加載事件
+          _loadEventsForCurrentView();
         }
       },
       builder: (context, state) {
@@ -256,6 +281,11 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    // 更新當前視圖以匹配state中的視圖
+    if (_currentView != state.currentView) {
+      _currentView = state.currentView;
+    }
+
     return SfCalendar(
       controller: _calendarController,
       view: _currentView,
@@ -265,8 +295,25 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       allowViewNavigation: widget.allowViewNavigation,
       showNavigationArrow: false,
       showWeekNumber: false,
+      onViewChanged: (ViewChangedDetails details) {
+        if (widget.onViewChanged != null) {
+          widget.onViewChanged!(details);
+        }
+      },
+      scheduleViewSettings: ScheduleViewSettings(
+          hideEmptyScheduleWeek: false,
+          appointmentItemHeight: 50.0,
+          monthHeaderSettings: MonthHeaderSettings(
+            backgroundColor: Colors.transparent,
+            monthTextStyle: TextStyle(fontSize: 16),
+            textAlign: TextAlign.start,
+            height: 24,
+          ),
+          weekHeaderSettings: WeekHeaderSettings(),
+          dayHeaderSettings: DayHeaderSettings(width: 50, dayFormat: 'EEEE'),
+          appointmentTextStyle: TextStyle(fontSize: 14)),
       appointmentBuilder: (context, details) => MaiCalendarAppointmentBuilder(
-        viewType: _currentView,
+        viewType: _calendarController.view,
         details: details,
         calendarBloc: _calendarBloc,
       ),

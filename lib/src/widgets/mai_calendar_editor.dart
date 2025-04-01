@@ -299,9 +299,15 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
                   const SizedBox(height: 4),
                   _buildTitleInput(),
                   const SizedBox(height: 4),
-                  _buildSpecialTitleCheckbox(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: _buildSpecialTitleCheckbox(),
+                  ),
                   const SizedBox(height: 4),
-                  _buildSpaceSelector(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildSpaceSelector(),
+                  ),
                   const SizedBox(height: 4),
                   Divider(color: Colors.grey.shade200),
                   Expanded(
@@ -318,7 +324,7 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -330,13 +336,16 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          FittedBox(
-            child: TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(padding: EdgeInsets.zero),
-              child: const Text(
-                "取消",
-                style: TextStyle(fontSize: 16),
+          Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: FittedBox(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                child: const Text(
+                  "取消",
+                  style: TextStyle(fontSize: 16),
+                ),
               ),
             ),
           ),
@@ -352,7 +361,7 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
             ],
           ),
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: const EdgeInsets.only(right: 16),
             child: FittedBox(
               child: TextButton(
                 onPressed: _isSaving ? null : _saveEvent, // 避免重複點擊
@@ -387,7 +396,7 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   Widget _buildListViewContent(BuildContext context, ScrollController scrollController) {
     return ListView(
       controller: scrollController, // 使用滾動控制器
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       physics: const AlwaysScrollableScrollPhysics(), // 確保總是可滾動
       children: [
         _buildTimeSelector(),
@@ -399,19 +408,22 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
   }
 
   Widget _buildTitleInput() {
-    return TextFormField(
-      cursorWidth: 2,
-      autofocus: false,
-      canRequestFocus: true,
-      controller: _titleTextEditingController,
-      style: const TextStyle(fontSize: 24),
-      decoration: InputDecoration(
-        contentPadding: const EdgeInsets.only(left: 9),
-        border: InputBorder.none,
-        hintText: "行事曆顯示名稱",
-        hintStyle: TextStyle(
-          fontSize: 24,
-          color: Colors.grey.shade600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextFormField(
+        cursorWidth: 2,
+        autofocus: false,
+        canRequestFocus: true,
+        controller: _titleTextEditingController,
+        style: const TextStyle(fontSize: 24),
+        decoration: InputDecoration(
+          contentPadding: EdgeInsets.zero,
+          border: InputBorder.none,
+          hintText: "行事曆顯示名稱",
+          hintStyle: TextStyle(
+            fontSize: 24,
+            color: Colors.grey.shade600,
+          ),
         ),
       ),
     );

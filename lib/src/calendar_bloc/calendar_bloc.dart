@@ -159,9 +159,16 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
 
   /// 處理視圖切換
   Future<void> _onChangeCalendarView(ChangeCalendarView event, Emitter<CalendarState> emit) async {
-    calendarController.view = event.view;
-    // 只更新視圖類型，保留已加載的事件數據
-    emit(state.viewChanged(event.view));
+    try {
+      calendarController.view = event.view;
+      // 強制刷新視圖
+      calendarController.displayDate = calendarController.displayDate ?? DateTime.now();
+      // 更新視圖類型，保留已加載的事件數據
+      emit(state.viewChanged(event.view));
+    } catch (e) {
+      // 如果設置視圖失敗，記錄錯誤但仍然更新狀態
+      emit(state.viewChanged(event.view));
+    }
   }
 
   /// 處理簡單事件創建

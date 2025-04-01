@@ -40,16 +40,13 @@ class _MaiCalendarAppointmentBuilderState extends State<MaiCalendarAppointmentBu
 
   @override
   Widget build(BuildContext context) {
-    switch (widget.viewType) {
+    final currentViewType = widget.viewType ?? CalendarView.month;
+    switch (currentViewType) {
       case CalendarView.schedule:
         return _buildScheduleView(context, widget.details);
       case CalendarView.day:
-      case CalendarView.timelineDay:
         return _buildDayView(context, widget.details);
       case CalendarView.week:
-      case CalendarView.timelineWeek:
-      case CalendarView.workWeek:
-      case CalendarView.timelineWorkWeek:
         return _buildWeekView(context, widget.details);
       default:
         return _buildMonthView(context, widget.details);
@@ -171,34 +168,49 @@ class _MaiCalendarAppointmentBuilderState extends State<MaiCalendarAppointmentBu
     final CalendarEvent event = details.appointments.first as CalendarEvent;
     return GestureDetector(
       onTap: () => _showEventDetails(context, event),
-      child: SizedBox(
-        height: 54,
+      child: Container(
+        height: 60,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: Colors.grey.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+        ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 時間列
-            Padding(
-              padding: const EdgeInsets.only(left: 0, right: 8),
+            // 時間列 - 使用固定寬度確保對齊
+            SizedBox(
+              width: 90,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 顯示開始時間
                   Text(
                     DateFormat('a hh:mm', 'zh_TW').format(event.startTime),
-                    style: const TextStyle(fontSize: 12, color: Colors.black),
+                    style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w500),
                   ),
-                  const SizedBox(height: 2),
-                  if (!event.isAllDay && event.endTime != null)
+                  const SizedBox(height: 4),
+                  // 無論是否有結束時間，都保持固定高度
+                  if (event.endTime != null && !event.isAllDay)
                     Text(
                       DateFormat('a hh:mm', 'zh_TW').format(event.endTime!),
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                    )
+                  else
+                    // 即使沒有結束時間，也保留空間確保對齊
+                    const SizedBox(height: 12),
                 ],
               ),
             ),
-            // 垂直線
+            // 垂直線 - 使用固定高度和邊距
             Container(
               width: 4,
-              height: 40,
+              height: 36,
               decoration: BoxDecoration(
                 color: HexColor(event.color),
                 borderRadius: BorderRadius.circular(2),
@@ -207,7 +219,7 @@ class _MaiCalendarAppointmentBuilderState extends State<MaiCalendarAppointmentBu
             // 標題和描述
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.only(left: 12),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,14 +235,17 @@ class _MaiCalendarAppointmentBuilderState extends State<MaiCalendarAppointmentBu
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (event.locationPath.isNotEmpty)
-                      Text(
-                        event.locationPath,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          event.locationPath,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                   ],
                 ),
