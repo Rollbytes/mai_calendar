@@ -110,6 +110,8 @@ class CalendarEvent {
   final DateTime? endTime; // 結束時間
   final bool isAllDay; // 是否為全天事件
   final String color; // 顏色
+  final String notes; // 事件描述
+  final String locationPath; // 地點路徑
 
   // 原有的資料來源識別符
   final String? rowId; // 如果事件來自MaiTable，對應的rowId
@@ -139,6 +141,8 @@ class CalendarEvent {
     this.endTime,
     this.isAllDay = false,
     this.color = "#FF4081FF",
+    this.notes = "",
+    this.locationPath = "",
     this.rowId,
     this.columnId,
     // 階層結構資訊
@@ -166,6 +170,8 @@ class CalendarEvent {
       endTime: json['endTime'] != null ? DateTime.parse(json['endTime']) : null,
       isAllDay: json['isAllDay'] ?? false,
       color: json['color'] ?? "#FF4081FF",
+      notes: json['notes'] ?? "",
+      locationPath: json['locationPath'] ?? "",
       rowId: json['rowId'],
       columnId: json['columnId'],
       // 階層結構資訊
@@ -189,6 +195,8 @@ class CalendarEvent {
       'endTime': endTime?.toIso8601String(),
       'isAllDay': isAllDay,
       'color': color,
+      'notes': notes,
+      'locationPath': locationPath,
       'rowId': rowId,
       'columnId': columnId,
       // 階層結構資訊
@@ -235,6 +243,8 @@ class CalendarEvent {
       endTime: dateTimeValue.endTime,
       isAllDay: !dateTimeValue.includeTime,
       color: dateTimeValue.color,
+      notes: "",
+      locationPath: "",
       rowId: cell.rowId,
       columnId: cell.columnId,
       // 階層結構資訊
@@ -255,17 +265,6 @@ class CalendarEvent {
     );
   }
 
-  /// 獲取事件的完整路徑描述
-  String get locationPath {
-    final List<String> pathParts = [];
-
-    if (baseName != null) pathParts.add(baseName!);
-    if (boardName != null) pathParts.add(boardName!);
-    if (tableName != null) pathParts.add(tableName!);
-
-    return pathParts.join(' > ');
-  }
-
 
   /// 創建帶有更新的欄位的事件副本
   CalendarEvent copyWith({
@@ -275,6 +274,8 @@ class CalendarEvent {
     DateTime? endTime,
     bool? isAllDay,
     String? color,
+    String? notes,
+    String? locationPath,
     String? source,
     String? rowId,
     String? columnId,
@@ -299,6 +300,8 @@ class CalendarEvent {
       endTime: endTime ?? this.endTime,
       isAllDay: isAllDay ?? this.isAllDay,
       color: color ?? this.color,
+      notes: notes ?? this.notes,
+      locationPath: locationPath ?? this.locationPath,
       rowId: rowId ?? this.rowId,
       columnId: columnId ?? this.columnId,
       baseId: baseId ?? this.baseId,

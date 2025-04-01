@@ -5,7 +5,7 @@ import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_state.dart';
 import 'package:mai_calendar/src/feature/color_picker/hex_color_adapter.dart';
 import 'package:mai_calendar/src/models/calendar_models.dart';
-import 'mai_calendar_editor.dart';
+import 'mai_calendar_appointment_detail_view.dart';
 
 /// 行事曆日期事件列表
 /// 用於顯示某一天的所有行程
@@ -382,11 +382,9 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
   }
 
   void _showEventDetails(CalendarEvent event) {
-    MaiCalendarEditor.show(
+    MaiCalendarAppointmentDetailView.show(
       context: context,
-      currentDate: widget.selectedDate,
-      mode: MaiCalendarBottomSheetMode.edit,
-      eventData: event,
+      event: event,
       calendarBloc: widget.calendarBloc,
     );
   }

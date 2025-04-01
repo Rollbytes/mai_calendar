@@ -5,7 +5,7 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../feature/color_picker/hex_color_adapter.dart';
 import '../models/calendar_models.dart';
 import '../calendar_bloc/calendar_bloc.dart';
-import 'mai_calendar_editor.dart';
+import 'mai_calendar_appointment_detail_view.dart';
 
 /// 行事曆中事件項目的自定義顯示組件
 class MaiCalendarAppointmentBuilder extends StatefulWidget {
@@ -244,12 +244,9 @@ class _MaiCalendarAppointmentBuilderState extends State<MaiCalendarAppointmentBu
 
   /// 顯示事件詳情
   void _showEventDetails(BuildContext context, CalendarEvent event) {
-    final DateTime eventDate = event.startTime;
-    MaiCalendarEditor.show(
+    MaiCalendarAppointmentDetailView.show(
       context: context,
-      currentDate: eventDate,
-      mode: MaiCalendarBottomSheetMode.edit,
-      eventData: event,
+      event: event,
       calendarBloc: _calendarBloc,
     );
   }
