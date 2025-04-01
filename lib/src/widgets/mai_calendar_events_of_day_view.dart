@@ -118,7 +118,6 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
 
   Widget _buildDraggableSheet(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         // 當列表達到頂部且繼續向下滑動時，控制整個表單高度
@@ -190,85 +189,80 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
             );
           }
         },
-        onTap: () => Navigator.of(context).pop(),
-        behavior: HitTestBehavior.translucent,
-        child: Container(
-          color: Colors.transparent,
-          child: DraggableScrollableSheet(
-            controller: _sheetController,
-            initialChildSize: 0.45,
-            minChildSize: 0.45,
-            maxChildSize: 0.95,
-            snap: true,
-            snapAnimationDuration: const Duration(milliseconds: 300),
-            snapSizes: const [0.45, 0.95],
-            builder: (context, scrollController) {
-              return NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  if (notification is ScrollUpdateNotification && !_isScrollAnimating && notification.metrics.pixels < 0) {
-                    // 如果向下拉動並且已經在頂部，縮小視圖
-                    if (_sheetController.size >= 0.9) {
-                      _isScrollAnimating = true;
-                      _sheetController
-                          .animateTo(
-                        0.45,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      )
-                          .whenComplete(() {
-                        _isScrollAnimating = false;
-                      });
-                      return true;
-                    } else if (_sheetController.size <= 0.5) {
-                      // 如果已經很小了，繼續下拉關閉頁面
-                      Navigator.of(context).pop();
-                      return true;
-                    }
+        child: DraggableScrollableSheet(
+          controller: _sheetController,
+          initialChildSize: 0.45,
+          minChildSize: 0.45,
+          maxChildSize: 0.95,
+          snap: true,
+          snapAnimationDuration: const Duration(milliseconds: 300),
+          snapSizes: const [0.45, 0.95],
+          builder: (context, scrollController) {
+            return NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollUpdateNotification && !_isScrollAnimating && notification.metrics.pixels < 0) {
+                  // 如果向下拉動並且已經在頂部，縮小視圖
+                  if (_sheetController.size >= 0.9) {
+                    _isScrollAnimating = true;
+                    _sheetController
+                        .animateTo(
+                      0.45,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    )
+                        .whenComplete(() {
+                      _isScrollAnimating = false;
+                    });
+                    return true;
+                  } else if (_sheetController.size <= 0.5) {
+                    // 如果已經很小了，繼續下拉關閉頁面
+                    Navigator.of(context).pop();
+                    return true;
                   }
-                  return false;
-                },
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [BoxShadow(color: Colors.grey, spreadRadius: 2, blurRadius: 4)],
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildDragIndicator(),
-                      _buildDateHeader(),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: BlocBuilder<CalendarBloc, CalendarState>(
-                          bloc: widget.calendarBloc,
-                          builder: (context, state) {
-                            if (state.isLoading) {
-                              return const Center(child: CircularProgressIndicator());
-                            }
-
-                            final eventsOfDay = _getEventsOfDay(state.events);
-
-                            // 更新排序 Bloc 中的項目，但不觸發排序
-                            if (_calendarSortBloc.state.items.isEmpty) {
-                              _calendarSortBloc.add(ItemsUpdated(eventsOfDay));
-                            }
-
-                            if (eventsOfDay.isEmpty) {
-                              return const Center(
-                                child: Text('今天沒有行程', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                              );
-                            }
-
-                            return _buildSortableEventList(eventsOfDay, scrollController);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+                }
+                return false;
+              },
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [BoxShadow(color: Colors.grey, spreadRadius: 2, blurRadius: 4)],
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-              );
-            },
-          ),
+                child: Column(
+                  children: [
+                    _buildDragIndicator(),
+                    _buildDateHeader(),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: BlocBuilder<CalendarBloc, CalendarState>(
+                        bloc: widget.calendarBloc,
+                        builder: (context, state) {
+                          if (state.isLoading) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+
+                          final eventsOfDay = _getEventsOfDay(state.events);
+
+                          // 更新排序 Bloc 中的項目，但不觸發排序
+                          if (_calendarSortBloc.state.items.isEmpty) {
+                            _calendarSortBloc.add(ItemsUpdated(eventsOfDay));
+                          }
+
+                          if (eventsOfDay.isEmpty) {
+                            return const Center(
+                              child: Text('今天沒有行程', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                            );
+                          }
+
+                          return _buildSortableEventList(eventsOfDay, scrollController);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
