@@ -92,7 +92,6 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
     super.initState();
     // 初始化排序 Bloc
     _calendarSortBloc = CalendarSortBloc(
-      itemsStream: () => Stream.value(_getEventsOfDay(widget.calendarBloc.state.events)),
       selectedDate: widget.selectedDate,
     );
   }

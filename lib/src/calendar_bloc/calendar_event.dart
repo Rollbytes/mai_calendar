@@ -80,3 +80,16 @@ class UpdateAppointmentDisplayCount extends CalendarBlocEvent {
 
   const UpdateAppointmentDisplayCount(this.count);
 }
+
+/// 加載搜尋結果到日曆
+class LoadSearchResults extends CalendarBlocEvent {
+  /// 搜尋結果事件列表
+  final List<CalendarEvent> searchResults;
+  final bool keepOriginalEvents;
+  final String source;
+  const LoadSearchResults({
+    required this.searchResults,
+    this.keepOriginalEvents = false,
+    this.source = 'search',
+  });
+}

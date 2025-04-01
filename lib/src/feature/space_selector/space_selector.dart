@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mai_calendar/src/models/base_models.dart';
 import 'package:mai_calendar/src/models/db_models.dart';
+import 'package:mai_calendar/src/models/calendar_models.dart';
 import 'space_selector_bloc.dart';
 import 'space_selector_event.dart';
 import 'space_selector_state.dart';
@@ -11,11 +12,11 @@ import 'space_selector_sheet.dart';
 ///
 /// 用於選擇 CalendarEvent 要存放的位置（Base、Board、Table、Column）
 class SpaceSelector extends StatefulWidget {
-  /// Bloc 實例
   final SpaceSelectorBloc spaceSelectorBloc;
-
-  /// 是否禁用選擇器
   final bool isDisabled;
+
+  /// 當前編輯的事件，編輯模式下用於顯示現有事件的位置資訊
+  final CalendarEvent? eventData;
 
   /// 當選擇完成時的回調
   final Function(Base base, Board board, MaiTable table, MaiColumn column)? onSelectionComplete;
@@ -24,6 +25,7 @@ class SpaceSelector extends StatefulWidget {
     super.key,
     required this.spaceSelectorBloc,
     this.isDisabled = false,
+    this.eventData,
     this.onSelectionComplete,
   });
 
@@ -44,8 +46,41 @@ class _SpaceSelectorState extends State<SpaceSelector> {
     // 使用提供的 Bloc
     _spaceSelectorBloc = widget.spaceSelectorBloc;
 
-    // 初始加載數據
-    _spaceSelectorBloc.add(GetRecentSelections());
+    // 如果有現有事件數據，則使用事件數據中的位置信息
+    if (widget.eventData != null) {
+      _setEventLocation();
+    } else {
+      // 初始加載數據
+      _spaceSelectorBloc.add(GetRecentSelections());
+    }
+  }
+
+  /// 設置事件位置信息
+  void _setEventLocation() {
+    final event = widget.eventData;
+    if (event == null) return;
+
+    setState(() {
+      // 設置選中的基地、協作版、表格和欄位
+      _selectedBase = event.base;
+      _selectedBoard = event.board;
+      _selectedTable = event.table;
+      _selectedTimeColumn = event.column;
+    });
+
+    // 向 bloc 發送事件以更新選中狀態
+    if (_selectedBase != null) {
+      _spaceSelectorBloc.add(SelectBase(_selectedBase!));
+    }
+    if (_selectedBoard != null) {
+      _spaceSelectorBloc.add(SelectBoard(_selectedBoard!));
+    }
+    if (_selectedTable != null) {
+      _spaceSelectorBloc.add(SelectTable(_selectedTable!));
+    }
+    if (_selectedTimeColumn != null) {
+      _spaceSelectorBloc.add(SelectTimeColumn(_selectedTimeColumn!));
+    }
   }
 
   @override
@@ -115,7 +150,7 @@ class _SpaceSelectorState extends State<SpaceSelector> {
               // 協作版選擇
               _PathItem(
                 icon: Icons.dashboard_outlined,
-                text: _selectedBoard?.name ?? "選擇協作版",
+                text: _selectedBoard?.name ?? widget.eventData?.boardName ?? "選擇協作版",
                 isDisabled: isDisabled,
               ),
               _buildSeparator(),
@@ -123,7 +158,7 @@ class _SpaceSelectorState extends State<SpaceSelector> {
               // 表格選擇
               _PathItem(
                 icon: Icons.table_chart_outlined,
-                text: _selectedTable?.name ?? "選擇表格",
+                text: _selectedTable?.name ?? widget.eventData?.tableName ?? "選擇表格",
                 isDisabled: isDisabled,
               ),
               _buildSeparator(),
@@ -131,7 +166,7 @@ class _SpaceSelectorState extends State<SpaceSelector> {
               // 欄位選擇
               _PathItem(
                 icon: Icons.view_column_outlined,
-                text: _selectedTimeColumn?.name ?? "選擇欄位",
+                text: _selectedTimeColumn?.name ?? widget.eventData?.columnName ?? "選擇欄位",
                 isDisabled: isDisabled,
               ),
             ],

@@ -31,6 +31,7 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
     on<CreateSimpleCalendarEvent>(_onCreateSimpleCalendarEvent);
     on<ToggleLunarDate>(_onToggleLunarDate);
     on<UpdateAppointmentDisplayCount>(_onUpdateAppointmentDisplayCount);
+    on<LoadSearchResults>(_onLoadSearchResults);
   }
 
   /// 處理加載多個事件的事件
@@ -209,6 +210,56 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
   /// 更新行程顯示數量
   Future<void> _onUpdateAppointmentDisplayCount(UpdateAppointmentDisplayCount event, Emitter<CalendarState> emit) async {
     emit(state.copyWith(appointmentDisplayCount: event.count));
+  }
+
+  /// 處理加載搜尋結果的事件
+  Future<void> _onLoadSearchResults(LoadSearchResults event, Emitter<CalendarState> emit) async {
+    try {
+      // 設置為加載中狀態
+      emit(state.loading());
+
+      // 決定是保留原有事件還是只顯示搜尋結果
+      final List<CalendarEvent> eventsToShow;
+      if (event.keepOriginalEvents) {
+        // 將搜尋結果添加到現有事件中
+        final originalEvents = List<CalendarEvent>.from(state.events);
+
+        // 去除重複的事件（依據ID）
+        final Map<String, CalendarEvent> eventMap = {};
+        for (var e in originalEvents) {
+          eventMap[e.id] = e;
+        }
+        for (var e in event.searchResults) {
+          eventMap[e.id] = e;
+        }
+
+        eventsToShow = eventMap.values.toList();
+      } else {
+        // 只顯示搜尋結果
+        eventsToShow = event.searchResults;
+      }
+
+      // 更新狀態
+      emit(state.eventsLoaded(
+        eventsToShow,
+        source: event.source,
+        // 使用一個足夠大的日期範圍來確保所有事件都能顯示
+        startDate: DateTime.now().subtract(const Duration(days: 365)),
+        endDate: DateTime.now().add(const Duration(days: 365)),
+      ));
+
+      // 如果搜尋結果不為空，嘗試將顯示日期設置為第一個事件的日期
+      if (event.searchResults.isNotEmpty) {
+        try {
+          final firstEventDate = event.searchResults.first.startTime;
+          calendarController.displayDate = firstEventDate;
+        } catch (e) {
+          // 忽略設置日期失敗的錯誤
+        }
+      }
+    } catch (e) {
+      emit(state.withError('加載搜尋結果失敗', e));
+    }
   }
 
   /// 獲取視圖名稱

@@ -4,7 +4,6 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:lunar/calendar/Lunar.dart';
 import '../repositories/mai_calendar_data_source.dart';
 import '../calendar_bloc/calendar_bloc.dart';
-import '../calendar_bloc/calendar_event.dart' as bloc_event;
 import '../calendar_bloc/calendar_state.dart';
 import 'mai_calendar_editor.dart';
 import 'mai_calendar_events_of_day_view.dart';
@@ -31,7 +30,12 @@ class MaiCalendarWidget extends StatefulWidget {
   /// 視圖變化回調
   final Function(ViewChangedDetails)? onViewChanged;
 
+  /// 日曆 Bloc
   final CalendarBloc calendarBloc;
+
+  /// 是否顯示添加按鈕
+  final bool showAddButton;
+
   const MaiCalendarWidget({
     super.key,
     this.initialView = CalendarView.month,
@@ -41,6 +45,7 @@ class MaiCalendarWidget extends StatefulWidget {
     this.appointmentDisplayCount = 3,
     this.onViewChanged,
     required this.calendarBloc,
+    this.showAddButton = true,
   });
 
   @override
@@ -67,9 +72,6 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     _calendarController = _calendarBloc.calendarController;
     _currentView = widget.initialView;
     _currentViewDate = widget.initialDisplayDate ?? DateTime.now();
-
-    // 初始加載事件
-    _loadEventsForCurrentView();
   }
 
   @override
@@ -98,19 +100,6 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
   void dispose() {
     _calendarController.dispose();
     super.dispose();
-  }
-
-  /// 加載當前視圖範圍內的事件
-  void _loadEventsForCurrentView() {
-    final viewStartDate = _getViewStartDate();
-    final viewEndDate = _getViewEndDate();
-
-    _calendarBloc.add(
-      bloc_event.LoadCalendarEvents(
-        start: viewStartDate,
-        end: viewEndDate,
-      ),
-    );
   }
 
   /// 自定義月曆單元格構建器
@@ -156,78 +145,6 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
     );
   }
 
-  /// 獲取當前視圖的開始日期
-  DateTime _getViewStartDate() {
-    switch (_currentView) {
-      case CalendarView.day:
-        return DateTime(_currentViewDate.year, _currentViewDate.month, _currentViewDate.day);
-      case CalendarView.week:
-        final weekStart = _currentViewDate.subtract(Duration(days: _currentViewDate.weekday - 1));
-        return DateTime(weekStart.year, weekStart.month, weekStart.day);
-      case CalendarView.workWeek:
-        final weekStart = _currentViewDate.subtract(Duration(days: _currentViewDate.weekday - 1));
-        return DateTime(weekStart.year, weekStart.month, weekStart.day);
-      case CalendarView.month:
-        return DateTime(_currentViewDate.year, _currentViewDate.month, 1);
-      case CalendarView.timelineDay:
-        return DateTime(_currentViewDate.year, _currentViewDate.month, _currentViewDate.day);
-      case CalendarView.timelineWeek:
-        final weekStart = _currentViewDate.subtract(Duration(days: _currentViewDate.weekday - 1));
-        return DateTime(weekStart.year, weekStart.month, weekStart.day);
-      case CalendarView.timelineWorkWeek:
-        final weekStart = _currentViewDate.subtract(Duration(days: _currentViewDate.weekday - 1));
-        return DateTime(weekStart.year, weekStart.month, weekStart.day);
-      case CalendarView.timelineMonth:
-        return DateTime(_currentViewDate.year, _currentViewDate.month, 1);
-      case CalendarView.schedule:
-        return DateTime(_currentViewDate.year, _currentViewDate.month, 1);
-    }
-  }
-
-  /// 獲取當前視圖的結束日期
-  DateTime _getViewEndDate() {
-    switch (_currentView) {
-      case CalendarView.day:
-        return DateTime(_currentViewDate.year, _currentViewDate.month, _currentViewDate.day, 23, 59, 59);
-      case CalendarView.week:
-        final weekStart = _currentViewDate.subtract(Duration(days: _currentViewDate.weekday - 1));
-        final weekEnd = weekStart.add(const Duration(days: 6));
-        return DateTime(weekEnd.year, weekEnd.month, weekEnd.day, 23, 59, 59);
-      case CalendarView.workWeek:
-        final weekStart = _currentViewDate.subtract(Duration(days: _currentViewDate.weekday - 1));
-        final weekEnd = weekStart.add(const Duration(days: 4)); // 工作周是5天
-        return DateTime(weekEnd.year, weekEnd.month, weekEnd.day, 23, 59, 59);
-      case CalendarView.month:
-        final monthEnd = DateTime(_currentViewDate.year, _currentViewDate.month + 1, 0);
-        return DateTime(monthEnd.year, monthEnd.month, monthEnd.day, 23, 59, 59);
-      case CalendarView.timelineDay:
-        return DateTime(_currentViewDate.year, _currentViewDate.month, _currentViewDate.day, 23, 59, 59);
-      case CalendarView.timelineWeek:
-        final weekStart = _currentViewDate.subtract(Duration(days: _currentViewDate.weekday - 1));
-        final weekEnd = weekStart.add(const Duration(days: 6));
-        return DateTime(weekEnd.year, weekEnd.month, weekEnd.day, 23, 59, 59);
-      case CalendarView.timelineWorkWeek:
-        final weekStart = _currentViewDate.subtract(Duration(days: _currentViewDate.weekday - 1));
-        final weekEnd = weekStart.add(const Duration(days: 4)); // 工作周是5天
-        return DateTime(weekEnd.year, weekEnd.month, weekEnd.day, 23, 59, 59);
-      case CalendarView.timelineMonth:
-        final monthEnd = DateTime(_currentViewDate.year, _currentViewDate.month + 1, 0);
-        return DateTime(monthEnd.year, monthEnd.month, monthEnd.day, 23, 59, 59);
-      case CalendarView.schedule:
-        final monthEnd = DateTime(_currentViewDate.year, _currentViewDate.month + 1, 0);
-        return DateTime(monthEnd.year, monthEnd.month, monthEnd.day, 23, 59, 59);
-    }
-  }
-
-  /// 顯示底部表單
-  void _showBottomSheet() {
-    MaiCalendarEditor.show(
-      context: context,
-      currentDate: _currentViewDate,
-      calendarBloc: _calendarBloc,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<CalendarBloc, CalendarState>(
@@ -249,9 +166,6 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
               _calendarController.view = state.currentView;
             }
           });
-          debugPrint("日曆視圖已切換為: ${state.currentView}");
-          // 視圖變化後重新加載事件
-          _loadEventsForCurrentView();
         }
       },
       builder: (context, state) {
@@ -259,15 +173,20 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
           children: [
             _buildCalendar(state),
             // 添加浮動按鈕
-            Positioned(
-              right: 16,
-              bottom: 16,
-              child: FloatingActionButton(
-                onPressed: _showBottomSheet,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                child: const Icon(Icons.add, color: Colors.white),
+            if (widget.showAddButton)
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: FloatingActionButton(
+                  onPressed: () => MaiCalendarEditor.show(
+                    context: context,
+                    currentDate: _currentViewDate,
+                    calendarBloc: _calendarBloc,
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: const Icon(Icons.add, color: Colors.white),
+                ),
               ),
-            ),
           ],
         );
       },
@@ -286,12 +205,14 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
       _currentView = state.currentView;
     }
 
+    final dataSource = MaiCalendarDataSource(state.events);
+
     return SfCalendar(
       controller: _calendarController,
       view: _currentView,
       firstDayOfWeek: 1, // 週一作為一週的第一天
       initialDisplayDate: widget.initialDisplayDate ?? DateTime.now(),
-      dataSource: MaiCalendarDataSource(state.events),
+      dataSource: dataSource,
       allowViewNavigation: widget.allowViewNavigation,
       showNavigationArrow: false,
       showWeekNumber: false,
@@ -356,11 +277,13 @@ class _MaiCalendarWidgetState extends State<MaiCalendarWidget> {
             context: context,
             selectedDate: details.date!,
             calendarBloc: _calendarBloc,
-            floatingActionButton: FloatingActionButton(
-              onPressed: () => MaiCalendarEditor.show(context: context, currentDate: details.date!, calendarBloc: _calendarBloc),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
+            floatingActionButton: widget.showAddButton
+                ? FloatingActionButton(
+                    onPressed: () => MaiCalendarEditor.show(context: context, currentDate: details.date!, calendarBloc: _calendarBloc),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: const Icon(Icons.add, color: Colors.white),
+                  )
+                : null,
           );
         }
       },

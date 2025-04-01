@@ -432,6 +432,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => CalendarSearchResultView(
+          calendarBloc: _calendarBloc,
           calendarSearchBloc: CalendarSearchBloc(calendarRepository: _repository),
           calendarSortBloc: CalendarSortBloc(),
         ),

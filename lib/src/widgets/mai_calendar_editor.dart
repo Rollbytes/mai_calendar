@@ -33,9 +33,9 @@ class MaiCalendarEditor {
   static Future<void> show({
     required BuildContext context,
     required DateTime currentDate,
-    MaiCalendarBottomSheetMode mode = MaiCalendarBottomSheetMode.create,
-    CalendarEvent? eventData, // 當 mode 為 view 時，用於傳遞事件數據
     required CalendarBloc calendarBloc, // 改為必須參數
+    MaiCalendarBottomSheetMode mode = MaiCalendarBottomSheetMode.create,
+    CalendarEvent? eventData,
   }) {
     return Navigator.of(context).push(
       PageRouteBuilder(
@@ -138,6 +138,12 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
       _startTime = widget.eventData!.startTime;
       _endTime = widget.eventData!.endTime;
       _isAllDay = widget.eventData!.isAllDay;
+
+      // 初始化選擇的位置信息
+      _selectedBase = widget.eventData!.base;
+      _selectedBoard = widget.eventData!.board;
+      _selectedTable = widget.eventData!.table;
+      _selectedColumn = widget.eventData!.column;
 
       // 更新其他 TimeSelectorBloc 的狀態
       if (_endTime != null) {
@@ -464,6 +470,8 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
         ),
         const SizedBox(height: 8),
         SpaceSelector(
+          isDisabled: widget.mode == MaiCalendarBottomSheetMode.edit,
+          eventData: widget.mode == MaiCalendarBottomSheetMode.edit ? widget.eventData : null,
           spaceSelectorBloc: _spaceSelectorBloc, // 使用初始化好的 SpaceSelectorBloc
           onSelectionComplete: (base, board, table, column) {
             setState(() {

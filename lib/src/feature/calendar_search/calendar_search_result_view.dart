@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_bloc.dart';
 import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_state.dart';
 import 'package:mai_calendar/src/feature/color_picker/hex_color_adapter.dart';
+import 'package:mai_calendar/src/widgets/mai_calendar_appointment_detail_view.dart';
 import '../../../src/models/index.dart';
 import 'calendar_search_bloc.dart';
 import 'calendar_search_event.dart';
 import 'calendar_search_state.dart';
+import 'package:mai_calendar/src/feature/calendar_search/search_calendar_view.dart';
 
 /// 行事曆搜尋結果頁面
 class CalendarSearchResultView extends StatefulWidget {
-  const CalendarSearchResultView({super.key, required this.calendarSearchBloc, required this.calendarSortBloc});
+  const CalendarSearchResultView({super.key, required this.calendarSearchBloc, required this.calendarSortBloc, required this.calendarBloc});
   final CalendarSearchBloc calendarSearchBloc;
   final CalendarSortBloc calendarSortBloc;
+  final CalendarBloc calendarBloc;
 
   @override
   State<CalendarSearchResultView> createState() => _CalendarSearchResultViewState();
@@ -23,12 +27,14 @@ class _CalendarSearchResultViewState extends State<CalendarSearchResultView> {
   final TextEditingController _searchController = TextEditingController();
   late CalendarSortBloc _calendarSortBloc;
   late CalendarSearchBloc _calendarSearchBloc;
+  late CalendarBloc _calendarBloc;
 
   @override
   void initState() {
     super.initState();
     _calendarSearchBloc = widget.calendarSearchBloc;
     _calendarSortBloc = widget.calendarSortBloc;
+    _calendarBloc = widget.calendarBloc;
     _calendarSearchBloc.add(const LoadAllCalendarEvents());
   }
 
@@ -43,6 +49,7 @@ class _CalendarSearchResultViewState extends State<CalendarSearchResultView> {
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: Colors.transparent,
+        backgroundColor: Colors.transparent,
         title: const Text('搜尋行事曆'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -166,8 +173,7 @@ class _CalendarSearchResultViewState extends State<CalendarSearchResultView> {
             child: ElevatedButton(
               onPressed: () {
                 // 在行事曆中顯示所有搜尋結果
-                Navigator.pop(context);
-                // TODO: 實現在行事曆中顯示搜尋結果的功能
+                _navigateToSearchCalendarView(context, state.searchResults);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
@@ -185,9 +191,22 @@ class _CalendarSearchResultViewState extends State<CalendarSearchResultView> {
     );
   }
 
+  /// 導航到搜尋結果行事曆視圖
+  void _navigateToSearchCalendarView(BuildContext context, List<CalendarEvent> searchResults) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SearchCalendarView(
+          calendarSearchBloc: _calendarSearchBloc,
+          searchResults: searchResults,
+          searchTitle: '搜尋結果: ${_searchController.text}',
+        ),
+      ),
+    );
+  }
+
   Widget _buildAppointmentItem(CalendarEvent event) {
     return InkWell(
-      onTap: () {},
+      onTap: () => MaiCalendarAppointmentDetailView.show(context: context, event: event, calendarBloc: _calendarBloc),
       child: SizedBox(
         height: 50,
         width: MediaQuery.of(context).size.width,
