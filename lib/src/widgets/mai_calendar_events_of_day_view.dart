@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:lunar/lunar.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_state.dart';
+import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_bloc.dart';
+import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_event.dart';
+import 'package:mai_calendar/src/feature/calendar_sort/calendar_sort_state.dart';
 import 'package:mai_calendar/src/feature/color_picker/hex_color_adapter.dart';
 import 'package:mai_calendar/src/models/calendar_models.dart';
 import 'mai_calendar_appointment_detail_view.dart';
@@ -77,11 +80,24 @@ class _MaiCalendarEventsOfDayViewContent extends StatefulWidget {
 class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOfDayViewContent> {
   final DraggableScrollableController _sheetController = DraggableScrollableController();
   final ScrollController _scrollController = ScrollController();
+  late CalendarSortBloc _calendarSortBloc;
+  bool _isScrollAnimating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 初始化排序 Bloc
+    _calendarSortBloc = CalendarSortBloc(
+      itemsStream: () => Stream.value(_getEventsOfDay(widget.calendarBloc.state.events)),
+      selectedDate: widget.selectedDate,
+    );
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _sheetController.dispose();
+    _calendarSortBloc.close();
     super.dispose();
   }
 
@@ -174,35 +190,193 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
             );
           }
         },
-        child: DraggableScrollableSheet(
-          controller: _sheetController,
-          initialChildSize: 0.45,
-          minChildSize: 0.45,
-          maxChildSize: 0.95,
-          snap: true,
-          snapAnimationDuration: const Duration(milliseconds: 300),
-          snapSizes: const [0.45, 0.95],
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.grey, spreadRadius: 2, blurRadius: 4)],
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                children: [
-                  _buildDragIndicator(),
-                  _buildDateHeader(),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: _buildEventList(scrollController),
+        onTap: () => Navigator.of(context).pop(),
+        behavior: HitTestBehavior.translucent,
+        child: Container(
+          color: Colors.transparent,
+          child: DraggableScrollableSheet(
+            controller: _sheetController,
+            initialChildSize: 0.45,
+            minChildSize: 0.45,
+            maxChildSize: 0.95,
+            snap: true,
+            snapAnimationDuration: const Duration(milliseconds: 300),
+            snapSizes: const [0.45, 0.95],
+            builder: (context, scrollController) {
+              return NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollUpdateNotification && !_isScrollAnimating && notification.metrics.pixels < 0) {
+                    // 如果向下拉動並且已經在頂部，縮小視圖
+                    if (_sheetController.size >= 0.9) {
+                      _isScrollAnimating = true;
+                      _sheetController
+                          .animateTo(
+                        0.45,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      )
+                          .whenComplete(() {
+                        _isScrollAnimating = false;
+                      });
+                      return true;
+                    } else if (_sheetController.size <= 0.5) {
+                      // 如果已經很小了，繼續下拉關閉頁面
+                      Navigator.of(context).pop();
+                      return true;
+                    }
+                  }
+                  return false;
+                },
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [BoxShadow(color: Colors.grey, spreadRadius: 2, blurRadius: 4)],
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                ],
-              ),
-            );
-          },
+                  child: Column(
+                    children: [
+                      _buildDragIndicator(),
+                      _buildDateHeader(),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: BlocBuilder<CalendarBloc, CalendarState>(
+                          bloc: widget.calendarBloc,
+                          builder: (context, state) {
+                            if (state.isLoading) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
+
+                            final eventsOfDay = _getEventsOfDay(state.events);
+
+                            // 更新排序 Bloc 中的項目，但不觸發排序
+                            if (_calendarSortBloc.state.items.isEmpty) {
+                              _calendarSortBloc.add(ItemsUpdated(eventsOfDay));
+                            }
+
+                            if (eventsOfDay.isEmpty) {
+                              return const Center(
+                                child: Text('今天沒有行程', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                              );
+                            }
+
+                            return _buildSortableEventList(eventsOfDay, scrollController);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSortableEventList(List<CalendarEvent> events, ScrollController scrollController) {
+    return BlocBuilder<CalendarSortBloc, CalendarSortState>(
+      bloc: _calendarSortBloc,
+      builder: (context, sortState) {
+        // 檢查排序狀態
+        if (sortState.status == CalendarSortStatus.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // 當未分組或是Time排序時，顯示普通列表
+        if (sortState.groupedItems.isEmpty || sortState.sortType == CalendarSortType.time) {
+          return _buildEventList(scrollController, events);
+        }
+
+        // 否則顯示分組列表
+        return _buildGroupedEventList(sortState, scrollController);
+      },
+    );
+  }
+
+  Widget _buildGroupedEventList(CalendarSortState sortState, ScrollController scrollController) {
+    final groupKeys = sortState.groupedItems.keys.toList();
+
+    return ListView.builder(
+      controller: scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: groupKeys.length,
+      itemBuilder: (context, groupIndex) {
+        final groupKey = groupKeys[groupIndex];
+        final groupItems = sortState.groupedItems[groupKey] ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () {
+                if (sortState.expandedGroups.contains(groupKey)) {
+                  _calendarSortBloc.add(GroupCollapsed(groupKey));
+                } else {
+                  _calendarSortBloc.add(GroupExpanded(groupKey));
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    if (sortState.sortType == CalendarSortType.color)
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: HexColor(groupKey),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey.shade300, width: 1),
+                        ),
+                        margin: const EdgeInsets.only(right: 8),
+                      ),
+                    Expanded(
+                      child: Text(
+                        groupKey,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${groupItems.length}',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      sortState.expandedGroups.contains(groupKey) ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                      color: Colors.grey,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (sortState.expandedGroups.contains(groupKey))
+              ListView.separated(
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                itemCount: groupItems.length,
+                itemBuilder: (context, itemIndex) => _buildEventItem(groupItems[itemIndex]),
+              ),
+            const SizedBox(height: 8),
+            Divider(
+              height: 1,
+              thickness: 0.5,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
     );
   }
 
@@ -223,64 +397,166 @@ class _MaiCalendarEventsOfDayViewContentState extends State<_MaiCalendarEventsOf
   Widget _buildDateHeader() {
     final lunarMonth = Lunar.fromDate(widget.selectedDate).getMonth();
     final lunarDay = Lunar.fromDate(widget.selectedDate).getDay();
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _formatDate(widget.selectedDate),
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '農曆$lunarMonth.$lunarDay',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
+    return Row(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat('M月dd日 EEEE', 'zh_TW').format(widget.selectedDate),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
+                Text(
+                  "農曆 $lunarMonth.$lunarDay",
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+        _buildSortButton(),
+      ],
     );
   }
 
-  String _formatDate(DateTime date) {
-    return DateFormat('M月d日 EEEE', 'zh_TW').format(date);
-  }
-
-  Widget _buildEventList(ScrollController scrollController) {
-    return BlocBuilder<CalendarBloc, CalendarState>(
-      bloc: widget.calendarBloc,
-      builder: (context, state) {
-        if (state.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final eventsOfDay = _getEventsOfDay(state.events);
-
-        if (eventsOfDay.isEmpty) {
-          return const Center(
-            child: Text('今天沒有行程', style: TextStyle(fontSize: 16, color: Colors.grey)),
-          );
-        }
-
-        return ListView.separated(
-          separatorBuilder: (context, index) => const SizedBox(height: 8),
-          controller: scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          itemCount: eventsOfDay.length,
-          itemBuilder: (context, index) => _buildEventItem(eventsOfDay[index]),
+  Widget _buildSortButton() {
+    return BlocBuilder<CalendarSortBloc, CalendarSortState>(
+      bloc: _calendarSortBloc,
+      builder: (context, sortState) {
+        return PopupMenuButton<CalendarSortType?>(
+          tooltip: '',
+          color: Colors.white,
+          offset: const Offset(0, 32),
+          constraints: const BoxConstraints(
+            minWidth: 80,
+            maxWidth: 130,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Icon(
+              Icons.swap_vert_outlined,
+              color: Colors.black,
+              size: 24,
+            ),
+          ),
+          itemBuilder: (BuildContext context) => [
+            const PopupMenuItem<CalendarSortType?>(
+              enabled: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.swap_vert_outlined, color: Colors.black, size: 18),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '排序方式',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            PopupMenuItem<CalendarSortType?>(
+              value: CalendarSortType.time,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: sortState.sortType == CalendarSortType.time && sortState.groupedItems.isNotEmpty ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: Text(
+                  '時間',
+                  style: TextStyle(
+                    color: sortState.sortType == CalendarSortType.time && sortState.groupedItems.isNotEmpty ? Colors.blue[800] : Colors.black,
+                    fontWeight: sortState.sortType == CalendarSortType.time && sortState.groupedItems.isNotEmpty ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+            PopupMenuItem<CalendarSortType?>(
+              value: CalendarSortType.color,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: sortState.sortType == CalendarSortType.color ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: Text(
+                  '顏色',
+                  style: TextStyle(
+                    color: sortState.sortType == CalendarSortType.color ? Colors.blue[800] : Colors.black,
+                    fontWeight: sortState.sortType == CalendarSortType.color ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+            PopupMenuItem<CalendarSortType?>(
+              value: CalendarSortType.board,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: sortState.sortType == CalendarSortType.board ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: Text(
+                  '來源',
+                  style: TextStyle(
+                    color: sortState.sortType == CalendarSortType.board ? Colors.blue[800] : Colors.black,
+                    fontWeight: sortState.sortType == CalendarSortType.board ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+            if (sortState.groupedItems.isNotEmpty)
+              PopupMenuItem<CalendarSortType?>(
+                value: null, // 使用null表示取消排序
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  child: const Text(
+                    '取消排序',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+              ),
+          ],
+          onSelected: (CalendarSortType? value) {
+            if (value == null) {
+              // 取消排序，清空分組
+              _calendarSortBloc.add(ItemsUpdated(_getEventsOfDay(widget.calendarBloc.state.events)));
+            } else {
+              _calendarSortBloc.add(SortTypeChanged(value));
+            }
+          },
         );
       },
+    );
+  }
+
+  Widget _buildEventList(ScrollController scrollController, List<CalendarEvent> events) {
+    return ListView.separated(
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
+      controller: scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: events.length,
+      itemBuilder: (context, index) => _buildEventItem(events[index]),
     );
   }
 
