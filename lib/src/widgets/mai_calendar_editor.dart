@@ -16,7 +16,6 @@ import 'package:mai_calendar/src/models/db_models.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_event.dart' as bloc_event;
 import 'package:mai_calendar/src/calendar_bloc/calendar_state.dart';
-import 'package:mai_calendar/repository_regisitor.dart';
 
 /// 表單模式枚舉
 enum MaiCalendarBottomSheetMode {
@@ -118,7 +117,7 @@ class _MaiCalendarBottomSheetContentState extends State<_MaiCalendarBottomSheetC
     _titleTextEditingController = TextEditingController();
 
     // 初始化 Blocs
-    _spaceSelectorBloc = SpaceSelectorBloc(repository: getIt<CalendarRepository>());
+    _spaceSelectorBloc = SpaceSelectorBloc(repository: CalendarRepository());
     _colorPickerBloc = ColorPickerBloc();
 
     // 如果有現有事件，初始化顏色

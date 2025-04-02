@@ -1,44 +1,48 @@
+/// Mai Calendar Library
+///
+/// A calendar management library providing scheduling features
+library mai_calendar;
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'repository_regisitor.dart';
-import 'screen/home_screen.dart';
-import 'src/config/env_config.dart';
-import 'src/feature/supabase_events/supabase_events_provider.dart';
-import 'src/repositories/calendar_repository.dart';
-import 'src/repositories/supabase_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+// Export core components
+export 'src/calendar_bloc/calendar_bloc.dart';
+export 'src/calendar_bloc/calendar_event.dart';
+export 'src/calendar_bloc/calendar_state.dart';
 
-  // 初始化服務定位器
-  setupRepository();
+// Export main widgets
+export 'src/widgets/mai_calendar_widget.dart';
+export 'src/widgets/mai_calendar_editor.dart';
+export 'src/widgets/mai_calendar_events_of_day_view.dart';
+export 'src/widgets/mai_calendar_appointment_builder.dart';
+export 'src/widgets/mai_calendar_appointment_detail_view.dart';
 
-  // 初始化 Supabase
-  await getIt<SupabaseService>().initialize(
-    supabaseUrl: EnvConfig.supabaseUrl,
-    supabaseKey: EnvConfig.supabaseAnonKey,
-  );
+// Export features
+export 'src/feature/supabase_events/supabase_events_provider.dart';
+export 'src/feature/sf_calendar_date_picker/sf_calendar_date_picker.dart';
+export 'src/feature/time_selector/time_selector.dart';
+export 'src/feature/space_selector/space_selector.dart';
+export 'src/feature/calendar_search/calendar_search_bloc.dart';
+export 'src/feature/calendar_search/calendar_search_result_view.dart';
+export 'src/feature/calendar_sort/calendar_sort_bloc.dart';
+export 'src/feature/sf_calendar_date_picker/sf_calendar_date_picker_cubit.dart';
+export 'src/feature/sf_calendar_date_picker/sf_calendar_date_picker_state.dart';
 
-  runApp(const MyApp());
-}
+// Export models without conflict
+export 'src/models/base_models.dart';
+export 'src/models/index.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// Re-export specific types from models
+export 'src/models/calendar_models.dart' hide MaiCell;
+export 'src/models/db_models.dart' hide MaiCell;
 
-  @override
-  Widget build(BuildContext context) {
-    return Provider<CalendarRepository>.value(
-      value: getIt<CalendarRepository>(),
-      child: SupabaseEventsProvider(
-        child: MaterialApp(
-          title: 'Mai Calendar',
-          theme: ThemeData(
-            primarySwatch: Colors.blue,
-            useMaterial3: true,
-          ),
-          home: const HomeScreen(),
-        ),
-      ),
-    );
+/// MaiCalendar library main class
+class MaiCalendar {
+  /// Initialize the MaiCalendar library
+  static void initialize() {
+    // Initialization logic can be added here
   }
+
+  /// Factory methods for creating cells are removed to avoid constructor issues
+  /// Users should directly import specific models when needed
 }

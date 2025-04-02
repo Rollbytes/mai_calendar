@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:mai_calendar/repository_regisitor.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_bloc.dart';
 import 'package:mai_calendar/src/calendar_bloc/calendar_event.dart' as bloc_event;
 import 'package:mai_calendar/src/calendar_bloc/calendar_state.dart';
@@ -44,7 +43,7 @@ class _SearchCalendarViewState extends State<SearchCalendarView> {
     _calendarSearchBloc = widget.calendarSearchBloc;
 
     // 初始化搜尋結果專用的 CalendarBloc
-    _calendarBloc = CalendarBloc(repository: getIt<CalendarRepository>());
+    _calendarBloc = CalendarBloc(repository: CalendarRepository());
 
     // 如果已經有搜尋結果，初始化當前結果並加載到日曆
     if (widget.searchResults != null && widget.searchResults!.isNotEmpty) {
