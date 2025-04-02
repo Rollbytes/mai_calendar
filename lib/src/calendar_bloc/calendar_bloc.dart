@@ -34,7 +34,6 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
     on<LoadSearchResults>(_onLoadSearchResults);
   }
 
-  /// 處理加載多個事件的事件
   Future<void> _onLoadCalendarEvents(LoadCalendarEvents event, Emitter<CalendarState> emit) async {
     try {
       emit(state.loading());

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mai_calendar/src/feature/calendar_search/calendar_search_bloc.dart';
@@ -25,7 +26,6 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  late CalendarRepository _repository;
   late CalendarBloc _calendarBloc;
   late CalendarDatePickerCubit _calendarDatePickerCubit;
   final DateRangePickerController _dateRangePickerController = DateRangePickerController();
@@ -38,8 +38,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     initializeDateFormatting('zh_TW', null);
 
     // 初始化依賴
-    _repository = CalendarRepository();
-    _calendarBloc = CalendarBloc(repository: _repository);
+    _calendarBloc = CalendarBloc(repository: GetIt.instance<CalendarRepository>());
     _calendarDatePickerCubit = CalendarDatePickerCubit();
 
     // 載入初始事件
@@ -433,7 +432,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       MaterialPageRoute(
         builder: (context) => CalendarSearchResultView(
           calendarBloc: _calendarBloc,
-          calendarSearchBloc: CalendarSearchBloc(calendarRepository: _repository),
+          calendarSearchBloc: CalendarSearchBloc(calendarRepository: GetIt.instance<CalendarRepository>()),
           calendarSortBloc: CalendarSortBloc(),
         ),
       ),
